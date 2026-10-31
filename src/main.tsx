@@ -7,4 +7,16 @@ import { createRoot } from 'react-dom/client';
 import App from './App';
 import './styles.css';
 
+// The app scrolls with transforms (components/Scroller.tsx). Focusing something off screen makes
+// the browser scroll its clipped parents too; that's undone here so the two never add up.
+document.addEventListener('scroll', (e) => {
+  const el = e.target;
+  if (el === document) {
+    window.scrollTo(0, 0);
+  } else if (el instanceof HTMLElement && !el.hasAttribute('data-scrollable')) {
+    el.scrollTop = 0;
+    el.scrollLeft = 0;
+  }
+}, true);
+
 createRoot(document.getElementById('root')!).render(<App />);

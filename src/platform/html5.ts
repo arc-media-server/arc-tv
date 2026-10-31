@@ -41,6 +41,8 @@ export function videoPlayer(host: HTMLElement, attach?: (video: HTMLVideoElement
     position: () => Math.round(video.currentTime * 1000),
     duration: () => (Number.isFinite(video.duration) ? Math.round(video.duration * 1000) : 0),
     paused: () => video.paused,
+    buffered: () => (video.buffered.length ? Math.round(video.buffered.end(video.buffered.length - 1) * 1000) : 0),
+    setSpeed: (rate) => { video.playbackRate = rate; },
     on: (l) => { listener = l; },
     destroy() {
       detach?.();
