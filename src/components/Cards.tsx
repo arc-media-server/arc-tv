@@ -102,7 +102,7 @@ export function MediaCard({ card, look = 'poster', seasonPoster, caption = true,
   card: Card;
   look?: CardStyle;
   seasonPoster?: boolean;
-  /** Home shows no captions: the summary above names whatever has focus, as Plex does. */
+  /** Captions on by default: the title and a line under it (S1 · E3 for an episode), on Home too as Plex shows them. */
   caption?: boolean;
   width?: number;
   onClick: () => void;
