@@ -45,16 +45,24 @@ export function Avatar({ profile, size = 44 }: { profile: Profile; size?: number
 
 export const libraryIcon = (lib: Library) => (lib.kind === 'shows' ? 'tv' : lib.kind === 'videos' ? 'clapper' : 'film');
 
-function SidebarItem({ icon, label, sub, selected, onClick }: { icon: ReactNode; label: string; sub?: string; selected: boolean; onClick: () => void }) {
+function SidebarItem({ icon, label, extra, selected, onClick }: { icon: ReactNode; label: string; extra?: ReactNode; selected: boolean; onClick: () => void }) {
   return (
-    <Focusable className={`side-item${selected ? ' selected' : ''}${sub ? ' tall' : ''}`} data-default={selected || undefined} onClick={onClick}>
+    <Focusable className={`side-item${selected ? ' selected' : ''}`} data-default={selected || undefined} onClick={onClick}>
       <span className="side-icon">{icon}</span>
-      <span className="side-label">
-        <span>{label}</span>
-        {sub && <span className="side-sub">{sub}</span>}
-      </span>
+      <span className="side-label">{label}</span>
+      {extra && <span className="side-extra">{extra}</span>}
     </Focusable>
   );
+}
+
+/** The time, in the TV's own format, as the Apple TV app shows it by the profile. */
+function Clock() {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 20000);
+    return () => window.clearInterval(timer);
+  }, []);
+  return <>{now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</>;
 }
 
 interface Frame { libraries: Library[]; watchlistAt: number }
@@ -142,15 +150,15 @@ export function Browse({ profile, canSwitchProfile, onSwitchProfile, onSignOut }
         onFocus={() => setOpen(true)}
         onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setOpen(false); }}
       >
-        <div className="side-logo"><ArcLogo size={48} /></div>
+        {/* As the Apple TV app: who's watching (and the time) at the top, then the sections. */}
+        {profile && canSwitchProfile && (
+          <SidebarItem icon={<Avatar profile={profile} size={36} />} label={profile.name} extra={<Clock />} selected={false} onClick={onSwitchProfile} />
+        )}
+        {!canSwitchProfile && <SidebarItem icon={<Icon name="out" />} label={t('nav.signOut')} extra={<Clock />} selected={false} onClick={onSignOut} />}
+        <div className="side-gap" />
         <SidebarItem icon={<Icon name="search" />} label={t('nav.search')} selected={section.kind === 'search'} onClick={() => show({ kind: 'search' })} />
         <SidebarItem icon={<Icon name="home" />} label={t('nav.home')} selected={section.kind === 'home'} onClick={() => show({ kind: 'home' })} />
         {items}
-        <div className="side-spacer" />
-        {profile && canSwitchProfile && (
-          <SidebarItem icon={<Avatar profile={profile} size={40} />} label={profile.name} sub={t('nav.switchProfile')} selected={false} onClick={onSwitchProfile} />
-        )}
-        {!canSwitchProfile && <SidebarItem icon={<Icon name="out" />} label={t('nav.signOut')} selected={false} onClick={onSignOut} />}
       </EntryContainer>
     </div>
   );
