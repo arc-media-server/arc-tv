@@ -111,7 +111,6 @@ export function HomeContent({ prefs, libraries, visits, onReady }: { prefs: Pref
                         card={card}
                         look={spec.style}
                         seasonPoster={spec.seasonPosters}
-                        caption={false}
                         width={WIDTH[spec.style]}
                         first={card === firstCard}
                         onFocus={() => setFocused(card)}
