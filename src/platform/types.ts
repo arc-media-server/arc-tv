@@ -27,6 +27,10 @@ export interface NativePlayer {
   position(): number;
   duration(): number;
   paused(): boolean;
+  /** How far ahead the player has the stream (ms in the stream), when it can tell. */
+  buffered?(): number;
+  /** Playback speed (1 = normal); absent where the TV's player can't change it smoothly. */
+  setSpeed?(rate: number): void;
   on(listener: (event: PlayerEvent, detail?: string) => void): void;
   destroy(): void;
 }

@@ -6,17 +6,29 @@ an `.ipk` for LG and a `.wgt` for Samsung. It talks to Arc only through `/api/v1
 app, and plays video with each TV's own player (LG's media pipeline behind `<video>`, Samsung's
 AVPlay), so files the TV can decode play as they are.
 
-## What's in this first slice
+## What it does
+
+The screens and behaviour follow the Android TV app (arc-android), which follows Plex:
 
 - **Find the server:** lists Arc servers on the TV's network (`GET /api/v1/discover` on each address
   of the TV's /24, port 8099), or takes an address.
 - **Sign in with a code:** shows a code to enter in Arc's *Link a Device*; no typing passwords.
-- **Who's watching:** profiles, with an on-screen PIN pad.
-- **Home:** Continue Watching with Up Next, then each library's recommended rows.
-- **Details:** movie, show (seasons and episodes in the profile's episode order) and episode pages.
+- **Who's watching:** profiles, with an on-screen PIN pad; Switch Profile (or Sign Out) in the sidebar.
+- **Sidebar:** Search, Home, the libraries and the Watchlist in the profile's order.
+- **Home:** full-screen artwork and a summary of whatever has focus over one row at a time; rows as
+  arranged on the web (Continue Watching or Up Next, the seasonal row, each library's Recently Added
+  and custom rows, collections, playlists) with the Queue row last.
+- **Library:** Recommended, the titles (sort, filters, A–Z bar, a windowed grid loaded in pages) and
+  Collections; Collection and Person pages.
+- **Search:** movies, shows, people and episodes as you type.
+- **Details:** movie and show pages with the next episode to play, seasons and episodes, cast,
+  related rows and extras; Watched, Watchlist and a More menu (Play Next, Add to Queue, Media Info).
+  Holding OK on any card opens the same menu.
 - **Player:** direct play, remux or conversion as Arc decides from the TV's capabilities, falling
-  back direct → remux → convert if the TV fails; resume, progress, skip intro/recap, Up Next at the
-  credits; seek with left/right and the remote's media keys.
+  back once to more conversion if the TV fails; resume and progress; the web's controls in its
+  order (play, next, back/forward 10 s; audio, subtitles, version, quality, chapters, speed, info);
+  subtitles drawn by the app from WebVTT with the profile's style and language choices; timeline
+  thumbnails; skip intro/recap/credits; Up Next with a countdown; the play queue.
 
 ## Layout
 
@@ -49,8 +61,8 @@ ARC_URL=http://192.168.1.10:8099 npm run dev   # or another Arc
 npm run check               # types, both TV builds, and the old-TV syntax check
 ```
 
-In the browser, arrow keys and Enter move like the remote, Escape or Backspace is Back, and Space is
-play/pause. Most UI work happens here; check layout and keys in the TV simulators, and playback on a
+In the browser, arrow keys and Enter move like the remote, holding Enter (or a right-click) is a long
+press, Escape or Backspace is Back, and Space is play/pause. Most UI work happens here; check layout and keys in the TV simulators, and playback on a
 real TV (the emulators have no real decoders).
 
 ## Run on an LG TV (webOS)
@@ -85,7 +97,8 @@ Kept as a list until each is shown on a real set (Arc's rule: no device claims w
 - AVPlay start/seek behaviour with Arc's converted (HLS, fMP4) streams.
 - Which webOS ACG groups (`requiredACG` in appinfo.json) the model-name and network-status Luna
   calls need on newer webOS; without them the app still works but can't find servers itself.
-- Subtitles: not shown yet; text tracks as WebVTT drawn by the app are next.
+- Subtitle timing and size on each TV's player; picture subtitles (burned in by Arc).
+- Focus, scrolling and artwork speed on the C9's Chrome 53 engine.
 
 ## Licence
 
