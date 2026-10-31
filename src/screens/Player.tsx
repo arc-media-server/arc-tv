@@ -745,7 +745,7 @@ function UpNext({ next, seconds, onPlay, onCancel }: { next: Item; seconds: numb
         <div className="up-next-title">{next.title}</div>
         <div className="muted">{[next.series_title, next.kind === 'episode' ? episodeCode(next) : ''].filter(Boolean).join(' · ')}</div>
         <Container className="inline">
-          <Button className="primary" data-default onClick={onPlay}><Icon name="play" size={28} /> {t('player.playNow')}</Button>
+          <Button className="primary" data-default onClick={onPlay}><Icon name="play" size={22} /> {t('player.playNow')}</Button>
           <Button onClick={onCancel}>{t('common.cancel')}</Button>
         </Container>
       </div>
