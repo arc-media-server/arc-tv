@@ -7,7 +7,7 @@ import {
 import { canUse, queues, setPlayed, setWatchlist, useChanges, withChanges } from '../lib/store';
 import { toast } from '../lib/toast';
 import { CardMenuContext } from './Cards';
-import { MenuItem, Overlay } from './Menu';
+import { Overlay, Popover, PopoverItem } from './Menu';
 import { Scroller, type ScrollerHandle } from './Scroller';
 import { Button } from './spot';
 
@@ -51,18 +51,17 @@ export function MoreMenu({ item, onMediaInfo, onClose }: { item: Item; onMediaIn
   const done = (fn: () => void) => () => { fn(); onClose(); };
   const on = !!item.user_data?.watchlisted;
   return (
-    <Overlay width={840} onClose={onClose}>
-      <h2 className="overlay-title">{item.title}</h2>
-      <MenuItem first icon="◉" label={t(watched(item) ? 'action.markUnwatched' : 'action.markWatched')} onClick={done(() => void toggleWatched(item))} />
-      {canWatchlist(item) && <MenuItem icon={on ? '★' : '☆'} label={t(on ? 'action.removeWatchlist' : 'action.addWatchlist')} onClick={done(() => void toggleWatchlist(item))} />}
+    <Popover title={item.title} onClose={onClose}>
+      <PopoverItem first icon={watched(item) ? 'circleCheck' : 'check'} label={t(watched(item) ? 'action.markUnwatched' : 'action.markWatched')} onClick={done(() => void toggleWatched(item))} />
+      {canWatchlist(item) && <PopoverItem icon={on ? 'bookmarkOn' : 'bookmark'} label={t(on ? 'action.removeWatchlist' : 'action.addWatchlist')} onClick={done(() => void toggleWatchlist(item))} />}
       {canQueue && queueable(item) && (
         <>
-          <MenuItem icon="⤒" label={t('queue.playNext')} onClick={done(() => void addToQueue(item, true))} />
-          <MenuItem icon="≡" label={t('queue.add')} onClick={done(() => void addToQueue(item, false))} />
+          <PopoverItem icon="next" label={t('queue.playNext')} onClick={done(() => void addToQueue(item, true))} />
+          <PopoverItem icon="list" label={t('queue.add')} onClick={done(() => void addToQueue(item, false))} />
         </>
       )}
-      {onMediaInfo && <MenuItem icon="ⓘ" label={t('action.mediaInfo')} onClick={onMediaInfo} />}
-    </Overlay>
+      {onMediaInfo && <PopoverItem icon="info" label={t('action.mediaInfo')} onClick={onMediaInfo} />}
+    </Popover>
   );
 }
 

@@ -1,5 +1,6 @@
 import { Spotlight } from '@enact/spotlight';
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { Icon } from './Icon';
 import { useBack } from '../lib/back';
 import { focusElement, Focusable, Trap } from './spot';
 
@@ -12,7 +13,7 @@ let nextId = 0;
 const returns: (HTMLElement | null)[] = [];
 
 function inPanel(el: HTMLElement | null) {
-  return !!el && (!document.body.contains(el) || !!(el.closest && el.closest('.overlay, .side-panel')));
+  return !!el && (!document.body.contains(el) || !!(el.closest && el.closest('.overlay, .side-panel, .popover')));
 }
 
 /** Moves the focus into a panel when it opens and back to where it was when it closes. */
@@ -83,4 +84,42 @@ export function MenuItem({ icon, label, detail, checked, onClick, first }: {
 
 export function MenuHeading({ children }: { children: ReactNode }) {
   return <div className="menu-heading">{children}</div>;
+}
+
+/**
+ * A title's menu as the Apple TV app draws its context menus: a floating rounded list beside what
+ * opened it (the focused card or button), each choice's name on the left and its icon on the right.
+ */
+export function Popover({ title, onClose, children }: { title?: string; onClose: () => void; children: ReactNode }) {
+  const id = useFocusTrap();
+  useBack(() => { onClose(); });
+  // Where the opener is, read once as the menu opens (the focus is still on it then).
+  const [at] = useState(() => {
+    const el = Spotlight.getCurrent() as HTMLElement | null;
+    const r = el ? el.getBoundingClientRect() : null;
+    const scale = window.innerWidth / 1920 || 1;
+    if (!r) return { left: 700, top: 300 };
+    const right = r.right / scale + 28;
+    const left = right + POPOVER_WIDTH <= 1880 ? right : Math.max(40, r.left / scale - 28 - POPOVER_WIDTH);
+    return { left, top: Math.max(40, Math.min(r.top / scale, 1080 - 40 - 560)) };
+  });
+  return (
+    <div className="popover-shade">
+      <Trap spotlightId={id} className="popover" style={{ left: at.left, top: at.top, width: POPOVER_WIDTH }}>
+        {title && <div className="popover-title">{title}</div>}
+        {children}
+      </Trap>
+    </div>
+  );
+}
+
+const POPOVER_WIDTH = 560;
+
+export function PopoverItem({ icon, label, onClick, first }: { icon: string; label: string; onClick: () => void; first?: boolean }) {
+  return (
+    <Focusable className="popover-item" onClick={onClick} data-default={first || undefined}>
+      <span className="popover-label">{label}</span>
+      <Icon name={icon} size={30} />
+    </Focusable>
+  );
 }
