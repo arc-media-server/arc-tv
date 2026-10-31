@@ -12,6 +12,8 @@ const platforms = ['webos', 'tizen', 'browser'];
 function classicScript(platform: string): Plugin {
   return {
     name: 'arc-classic-script',
+    // Only the build: the dev server needs its module scripts.
+    apply: 'build',
     enforce: 'post',
     transformIndexHtml(html) {
       // Samsung's TV APIs (AVPlay, network, product info) come from a script the TV provides.
