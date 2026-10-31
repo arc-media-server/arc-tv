@@ -37,9 +37,10 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: `dist/${platform}`,
       emptyOutDir: true,
-      // 2019–2020 TVs: webOS 5 is about Chrome 68, Tizen 5.5 about Chrome 69.
-      target: 'chrome68',
-      cssTarget: 'chrome68',
+      // The oldest TV in use: LG's 2019 sets (webOS 4.5, e.g. the C9) run Chrome 53. Samsung's 2019
+      // sets (Tizen 5.0) are newer, about Chrome 63.
+      target: 'chrome53',
+      cssTarget: 'chrome53',
       modulePreload: false,
       assetsInlineLimit: 0,
       chunkSizeWarningLimit: 2000,
