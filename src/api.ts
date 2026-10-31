@@ -175,6 +175,7 @@ export interface Prefs {
   subtitle_mode?: string;
   audio_language?: string;
   auto_play?: boolean;
+  auto_skip?: boolean;
   subtitle_style?: { size?: string; color?: string; background?: string; position?: string };
 }
 

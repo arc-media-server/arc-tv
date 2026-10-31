@@ -5,7 +5,7 @@ import { api, apiOrNull, apiText, ApiError, enc, type Extra, type Item, type Pla
 import { Artwork, useArtwork } from '../components/Artwork';
 import { cardFor } from '../components/Cards';
 import { Icon } from '../components/Icon';
-import { MenuItem, SidePanel } from '../components/Menu';
+import { Popover, PopoverItem } from '../components/Menu';
 import { Scroller } from '../components/Scroller';
 import { Button, Container, Focusable, Trap } from '../components/spot';
 import { formatTime, t } from '../i18n';
@@ -356,6 +356,17 @@ export function Player({ item: start, startMs, entryId, carryOn }: { item: Item;
   // nothing next the queue is done and the player closes.
   const marker = skippable(plan, pos);
   const inCredits = marker?.kind === 'credits';
+  // Skip Intros Automatically (the profile's auto_skip): each intro or recap is skipped once, so
+  // seeking back into one plays it.
+  const autoSkipped = useRef<string>('');
+  useEffect(() => {
+    if (!marker || marker.kind === 'credits' || !prefsRef.current.auto_skip) return;
+    const key = `${marker.kind}:${marker.start_ms}`;
+    if (autoSkipped.current.indexOf(key) >= 0) return;
+    autoSkipped.current += `|${key}`;
+    seekTo(marker.end_ms);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [marker && marker.start_ms]);
   useEffect(() => {
     if (inCredits && next && !creditsOffered) {
       setCreditsOffered(true);
@@ -497,7 +508,7 @@ export function Player({ item: start, startMs, entryId, carryOn }: { item: Item;
   };
 
   const control = (icon: string, text: string, onClick: () => void, id?: string) => (
-    <Focusable key={id ?? text} className="ctl" spotlightId={id} onClick={onClick} onFocus={() => setLabel(text)} onBlur={() => setLabel(null)}>
+    <Focusable key={id ?? text} className="ctl" spotlightId={id} onClick={onClick} onFocus={() => setLabel(id === 'player-play' ? PLAY_LABEL : text)} onBlur={() => setLabel(null)}>
       <Icon name={icon} size={40} />
     </Focusable>
   );
@@ -536,21 +547,39 @@ export function Player({ item: start, startMs, entryId, carryOn }: { item: Item;
         <div className="skip-button">{t(marker.kind === 'recap' ? 'player.skipRecap' : marker.kind === 'credits' ? 'player.skipCredits' : 'player.skipIntro')}</div>
       )}
       {controls && !stopped && !failed && (
+        // As the Apple TV app's player: everything along the bottom over a shadow; the title on
+        // the left, the buttons (in the web player's order) on the right, then a thin timeline
+        // with the time played and the time left under it.
         <Container className="controls">
-          <div className="controls-top">
-            <div>
-              <div className="ctl-title">{title}</div>
-              {subtitleLine && <div className="muted">{subtitleLine}</div>}
-            </div>
-            {control('close', t('player.closePlayer'), () => nav.back())}
-          </div>
           <div className="controls-bottom">
             {marker && upNextIn === null && (
               <Button className="skip-inline" onClick={() => (marker.kind === 'credits' && next ? playNext() : seekTo(marker.end_ms))}>
                 {t(marker.kind === 'recap' ? 'player.skipRecap' : marker.kind === 'credits' ? (next ? 'player.playNext' : 'player.skipCredits') : 'player.skipIntro')}
               </Button>
             )}
-            <div className="ctl-label">{label}</div>
+            <div className="ctl-head">
+              <div className="ctl-heading">
+                {subtitleLine && <div className="ctl-sub">{subtitleLine}</div>}
+                <div className="ctl-title">{title}</div>
+              </div>
+              <div className="ctl-side">
+                <div className="ctl-label">{label === PLAY_LABEL ? t(playing ? 'player.pause' : 'player.play') : label}</div>
+                <Container className="ctl-row">
+                  {control(playing ? 'pause' : 'play', t(playing ? 'player.pause' : 'player.play'), togglePlay, 'player-play')}
+                  {next && control('next', t('player.next', { title: next.item.title }), playNext)}
+                  {control('back10', t('player.back10'), () => seekBy(-10000))}
+                  {control('fwd10', t('player.forward10'), () => seekBy(10000))}
+                  <span className="ctl-gap" />
+                  {plan && (plan.audio_tracks ?? []).length > 1 && control('audio', t('player.audio'), () => setMenu('audio'))}
+                  {plan && textSubs.length > 0 && control('captions', t('player.subtitles'), () => setMenu('subtitles'))}
+                  {plan && (plan.versions ?? []).length > 1 && control('film', t('player.version'), () => setMenu('version'))}
+                  {plan && control('sliders', t('player.quality'), () => setMenu('quality'))}
+                  {plan && chapters.length > 1 && control('list', t('player.chapters'), () => setMenu('chapters'))}
+                  {player.current?.setSpeed && control('gauge', t('player.speed'), () => setMenu('speed'))}
+                  {plan && control('info', t('player.info'), () => setMenu('info'))}
+                </Container>
+              </div>
+            </div>
             <Focusable
               className="timeline"
               onFocus={() => setLabel(null)}
@@ -570,24 +599,10 @@ export function Player({ item: start, startMs, entryId, carryOn }: { item: Item;
               {scrub !== null && trick && <Thumb tp={trick} ms={scrub} left={duration ? (scrub / duration) * 1728 : 0} />}
               {scrub !== null && <div className="tl-time" style={{ left: pct(scrub) }}>{formatTime(scrub)}</div>}
             </Focusable>
-            <Container className="ctl-row">
-              <Container className="ctl-group">
-                {control(playing ? 'pause' : 'play', t(playing ? 'player.pause' : 'player.play'), togglePlay, 'player-play')}
-                {next && control('next', t('player.next', { title: next.item.title }), playNext)}
-                {control('back10', t('player.back10'), () => seekBy(-10000))}
-                {control('fwd10', t('player.forward10'), () => seekBy(10000))}
-                <span className="ctl-time">{formatTime(shown)} / {formatTime(duration)}</span>
-              </Container>
-              <Container className="ctl-group">
-                {plan && (plan.audio_tracks ?? []).length > 1 && control('audio', t('player.audio'), () => setMenu('audio'))}
-                {plan && textSubs.length > 0 && control('captions', t('player.subtitles'), () => setMenu('subtitles'))}
-                {plan && (plan.versions ?? []).length > 1 && control('film', t('player.version'), () => setMenu('version'))}
-                {plan && control('sliders', t('player.quality'), () => setMenu('quality'))}
-                {plan && chapters.length > 1 && control('list', t('player.chapters'), () => setMenu('chapters'))}
-                {player.current?.setSpeed && control('gauge', t('player.speed'), () => setMenu('speed'))}
-                {plan && control('info', t('player.info'), () => setMenu('info'))}
-              </Container>
-            </Container>
+            <div className="ctl-times">
+              <span>{formatTime(shown)}</span>
+              <span>-{formatTime(Math.max(0, duration - shown))}</span>
+            </div>
           </div>
         </Container>
       )}
@@ -613,6 +628,9 @@ export function Player({ item: start, startMs, entryId, carryOn }: { item: Item;
     </div>
   );
 }
+
+/** The play/pause button's label follows the state while it has the focus. */
+const PLAY_LABEL = '\u0000play';
 
 function PlayerMenu({ menu, plan, subtitle, quality, speed, chapterAt, caps, onClose, onAudio, onSubtitle, onVersion, onQuality, onChapter, onSpeed }: {
   menu: Exclude<Menu, null>;
@@ -642,14 +660,12 @@ function PlayerMenu({ menu, plan, subtitle, quality, speed, chapterAt, caps, onC
       [t('player.stats.tv'), caps ? [caps.max_height ? `${caps.max_height}p` : '', (caps.hdr_formats ?? []).join(', ') || 'SDR', caps.video.join(', ')].filter(Boolean).join(' · ') : ''],
     ];
     return (
-      <SidePanel title={title} body={body} onClose={onClose}>
-        <Scroller className="panel-list">
-          {rows.filter(([, v2]) => v2).map(([k, v2]) => (
-            <div key={k} className="stat-row"><div className="info-label">{k}</div><div>{v2}</div></div>
-          ))}
-          <MenuItem first label={t('common.close')} onClick={onClose} />
-        </Scroller>
-      </SidePanel>
+      <Popover place="above" shade={false} title={title} body={body} onClose={onClose}>
+        {rows.filter(([, v2]) => v2).map(([k, v2]) => (
+          <div key={k} className="popover-stat"><div className="info-label">{k}</div><div>{v2}</div></div>
+        ))}
+        <PopoverItem first icon="close" label={t('common.close')} onClick={onClose} />
+      </Popover>
     );
   }
   let title = '';
@@ -705,11 +721,11 @@ function PlayerMenu({ menu, plan, subtitle, quality, speed, chapterAt, caps, onC
   }
   const firstKey = (options.find((o) => o.selected) ?? options[0])?.key;
   return (
-    <SidePanel title={title} body={body} onClose={onClose}>
-      <Scroller className="panel-list">
-        {options.map((o) => <MenuItem key={o.key} label={o.name} detail={o.detail} checked={o.selected} first={o.key === firstKey} onClick={o.pick} />)}
+    <Popover place="above" shade={false} title={title} body={body} onClose={onClose}>
+      <Scroller className="popover-list" pad={24}>
+        {options.map((o) => <PopoverItem key={o.key} icon={o.selected ? 'check' : ''} label={o.name} detail={o.detail} first={o.key === firstKey} onClick={o.pick} />)}
       </Scroller>
-    </SidePanel>
+    </Popover>
   );
 }
 
