@@ -1,14 +1,14 @@
 import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { api, type CollectionPage, type Item, type Season, type SeasonsResponse } from '../api';
-import { ImmersiveBackdrop, TitleSummary } from '../components/Backdrop';
+import { backdropOf, TitleLogo } from '../components/Backdrop';
 import { cardFor, CardMenuContext, ExtraCard, MediaCard, PersonCard, Pressable, ProgressLine, Shelf, Strip, WatchBadge } from '../components/Cards';
-import { Artwork } from '../components/Artwork';
+import { Artwork, useArtwork } from '../components/Artwork';
 import { Icon } from '../components/Icon';
 import { Scroller } from '../components/Scroller';
 import { Button, Container, Focusable, useInitialFocus } from '../components/spot';
 import { MediaInfo, MoreMenu, toggleWatched, toggleWatchlist, useCanQueue } from '../components/TitleMenu';
 import { formatRuntime, formatTime, t } from '../i18n';
-import { episodeCode, formatLabels, resumeMs, watched } from '../lib/format';
+import { episodeCode, formatLabels, languageName, resumeMs, watched } from '../lib/format';
 import { useActive, useNav } from '../lib/nav';
 import { queues, useChanges, withChanges } from '../lib/store';
 
@@ -93,6 +93,51 @@ function EpisodeStrip({ episodes, focusId, onPlay }: { episodes: Item[]; focusId
   );
 }
 
+/** The full-screen artwork behind the page, dimmed once the page scrolls past the top. */
+function HeroBackdrop({ item, dim }: { item: Item; dim: boolean }) {
+  const art = useArtwork(backdropOf(item));
+  return (
+    <div className="hero-backdrop">
+      {art && <img className="hero-img fade-in" src={art} alt="" />}
+      <div className="hero-shade" />
+      <div className={`hero-dim${dim ? ' on' : ''}`} />
+    </div>
+  );
+}
+
+/** The Apple TV app's Information block at the foot of a title's page. */
+function InfoSection({ item }: { item: Item }) {
+  const names = (role: string, n = 4) => (item.credits ?? []).filter((c) => c.role === role).slice(0, n).map((c) => c.name).join(', ');
+  const released = item.release_date ? new Date(item.release_date + 'T12:00:00').toLocaleDateString([], { year: 'numeric', month: 'long', day: 'numeric' }) : item.year ? String(item.year) : '';
+  const rows: [string, string][] = [
+    [t('details.info.genre'), (item.genres ?? []).join(', ')],
+    [t('details.info.released'), released],
+    [t('details.info.runtime'), item.kind !== 'series' && item.runtime_min ? formatRuntime(item.runtime_min) : ''],
+    [t('details.info.rated'), item.content_rating ?? ''],
+    [t('details.info.studio'), item.studio ?? ''],
+    [t('details.info.language'), languageName(item.original_language)],
+    [t('details.info.starring'), names('actor', 5)],
+    [t('details.info.directors'), names('director')],
+    [t('details.info.writers'), names('writer')],
+  ];
+  const shown = rows.filter((r) => r[1]);
+  if (!shown.length) return null;
+  return (
+    <section className="info-section" data-section>
+      <h2 className="shelf-title">{t('details.info')}</h2>
+      {/* Focusable so the page can scroll down to it; there's nothing to press. */}
+      <Focusable className="info-grid">
+        {shown.map(([k, v]) => (
+          <div key={k} className="info-cell">
+            <div className="info-key">{k}</div>
+            <div className="info-value">{v}</div>
+          </div>
+        ))}
+      </Focusable>
+    </section>
+  );
+}
+
 function RoundButton({ icon, label, on, onClick, onLabel }: { icon: string; label: string; on?: boolean; onClick: () => void; onLabel: (l: string | null) => void }) {
   return (
     <Focusable className={`round-btn${on ? ' on' : ''}`} onClick={onClick} onFocus={() => onLabel(label)} onBlur={() => onLabel(null)}>
@@ -109,6 +154,7 @@ export function Details({ id, episodeId }: { id: string; episodeId?: string }) {
   const [seasons, setSeasons] = useState<Season[] | null>(null);
   const [related, setRelated] = useState<Related[]>([]);
   const [error, setError] = useState('');
+  const [scrolled, setScrolled] = useState(false);
   const [panel, setPanel] = useState<'more' | 'info' | null>(null);
   const [label, setLabel] = useState<string | null>(null);
   const changes = useChanges();
@@ -170,12 +216,12 @@ export function Details({ id, episodeId }: { id: string; episodeId?: string }) {
       : code ? t('details.playEpisode', { code }) : t('details.play');
   const left = item.unwatched_count ?? 0;
   const meta = [
-    item.kind === 'episode' ? [episodeCode(item), item.title].filter(Boolean).join(' · ') : '',
+    (item.genres ?? []).slice(0, 2).join(', '),
     item.year ? String(item.year) : '',
     !series && item.runtime_min ? formatRuntime(item.runtime_min) : '',
     series && left > 0 ? (left === 1 ? t('details.oneEpisodeLeft') : t('details.episodesLeft', { n: left })) : '',
+    item.content_rating ?? '',
     item.rating ? `★ ${item.rating.toFixed(1)}` : '',
-    (item.genres ?? []).slice(0, 2).join(', '),
   ];
   const canWatchlist = item.kind === 'movie' || series;
   const available = (seasons ?? []).reduce<Item[]>((all, s) => all.concat(s.episodes), []).filter((e) => e.available !== false);
@@ -192,38 +238,48 @@ export function Details({ id, episodeId }: { id: string; episodeId?: string }) {
 
   return (
     <div className="screen details" ref={root}>
-      <ImmersiveBackdrop item={item} delay={0} />
-      <Scroller className="details-page" pad={72}>
-        <section className="details-head" data-section>
-          <TitleSummary item={item} meta={meta} labels={formatLabels(item.files)} />
-          <Container className="actions">
-            {target && (
-              <Button className="primary" data-default={!focusEp || undefined} onClick={() => nav.play(target, resume)}>
-                <Icon name="play" size={32} /> {playLabel}
-              </Button>
-            )}
-            {target && resume > 0 && (
-              <Button onClick={() => nav.play(target, 0)}><Icon name="restart" size={32} /> {t('details.fromStart')}</Button>
-            )}
-            {series && canQueue && available.length > 0 && (
-              <Button onClick={() => void shuffle()}><Icon name="shuffle" size={32} /> {t('action.shuffle')}</Button>
-            )}
-            {item.kind === 'episode' && item.parent_id && (
-              <Button onClick={() => nav.open({ id: item.parent_id!, kind: 'series', title: item.series_title ?? '' })}><Icon name="tv" size={32} /> {t('details.goToShow')}</Button>
-            )}
-            <RoundButton icon="circleCheck" on={watched(item)} label={t(watched(item) ? 'action.markUnwatched' : 'action.markWatched')} onClick={onWatched} onLabel={setLabel} />
-            {canWatchlist && (
-              <RoundButton
-                icon={item.user_data?.watchlisted ? 'bookmarkOn' : 'bookmark'}
-                on={!!item.user_data?.watchlisted}
-                label={t(item.user_data?.watchlisted ? 'action.removeWatchlist' : 'action.addWatchlist')}
-                onClick={() => void toggleWatchlist(item)}
-                onLabel={setLabel}
-              />
-            )}
-            <RoundButton icon="more" label={t('action.more')} onClick={() => setPanel('more')} onLabel={setLabel} />
-          </Container>
-          <div className="action-label">{label}</div>
+      <HeroBackdrop item={item} dim={scrolled} />
+      <Scroller className="details-page" pad={72} onMove={(o) => setScrolled(o > 40)}>
+        {/* As the Apple TV app: the artwork fills the screen, the logo sits low on it, and the
+            buttons and description share a line beneath; the rest scrolls up over a dimmed copy. */}
+        <section className="details-hero" data-section>
+          <TitleLogo item={item} />
+          {item.kind === 'episode' && <div className="hero-episode">{[episodeCode(item), item.title].filter(Boolean).join(' · ')}</div>}
+          <div className="hero-row">
+            <div className="hero-actions">
+              <Container className="actions">
+                {target && (
+                  <Button className="primary" data-default={!focusEp || undefined} onClick={() => nav.play(target, resume)}>
+                    <Icon name="play" size={32} /> {playLabel}
+                  </Button>
+                )}
+                {target && resume > 0 && <RoundButton icon="restart" label={t('details.fromStart')} onClick={() => nav.play(target, 0)} onLabel={setLabel} />}
+                {series && canQueue && available.length > 0 && <RoundButton icon="shuffle" label={t('action.shuffle')} onClick={() => void shuffle()} onLabel={setLabel} />}
+                {item.kind === 'episode' && item.parent_id && (
+                  <RoundButton icon="tv" label={t('details.goToShow')} onClick={() => nav.open({ id: item.parent_id!, kind: 'series', title: item.series_title ?? '' })} onLabel={setLabel} />
+                )}
+                <RoundButton icon="circleCheck" on={watched(item)} label={t(watched(item) ? 'action.markUnwatched' : 'action.markWatched')} onClick={onWatched} onLabel={setLabel} />
+                {canWatchlist && (
+                  <RoundButton
+                    icon={item.user_data?.watchlisted ? 'bookmarkOn' : 'bookmark'}
+                    on={!!item.user_data?.watchlisted}
+                    label={t(item.user_data?.watchlisted ? 'action.removeWatchlist' : 'action.addWatchlist')}
+                    onClick={() => void toggleWatchlist(item)}
+                    onLabel={setLabel}
+                  />
+                )}
+                <RoundButton icon="more" label={t('action.more')} onClick={() => setPanel('more')} onLabel={setLabel} />
+              </Container>
+              <div className="action-label">{label}</div>
+            </div>
+            <div className="hero-about">
+              {item.overview && <p className="hero-overview">{item.overview}</p>}
+              <div className="hero-meta">
+                <span>{meta.filter(Boolean).join(' · ')}</span>
+                {formatLabels(item.files).map((l) => <span key={l} className="label">{l}</span>)}
+              </div>
+            </div>
+          </div>
         </section>
         {series && seasons && <Seasons key={initialSeason} seasons={seasons} initial={initialSeason} focusId={focusEp?.id} onPlay={(ep) => nav.play(ep, resumeMs(ep))} />}
         {cast.length > 0 && (
@@ -241,6 +297,7 @@ export function Details({ id, episodeId }: { id: string; episodeId?: string }) {
             {item.extras!.map((e) => <ExtraCard key={e.id} extra={e} onClick={() => nav.playExtra(e)} />)}
           </Shelf>
         )}
+        <InfoSection item={item} />
       </Scroller>
       {panel === 'more' && <MoreMenu item={item} onMediaInfo={item.files?.length ? () => setPanel('info') : undefined} onClose={() => setPanel(null)} />}
       {panel === 'info' && <MediaInfo item={item} onClose={() => setPanel(null)} />}

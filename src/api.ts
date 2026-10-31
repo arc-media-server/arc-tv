@@ -134,6 +134,9 @@ export interface Item {
   year?: number;
   overview?: string;
   tagline?: string;
+  release_date?: string;
+  studio?: string;
+  original_language?: string;
   runtime_min?: number;
   content_rating?: string;
   rating?: number;
