@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { apiOrNull, type Item, type Palette } from '../api';
 import { useArtwork } from './Artwork';
+import { Icon } from './Icon';
+import { Focusable } from './spot';
 
 // The whole-screen backdrop behind Home and a title's page, as the Android app's (and Plex's TV
 // app): the art sits whole in the top right over an Ultra Blur wash of its own colours (worked out
@@ -120,5 +122,26 @@ export function TitleSummary({ item, meta, labels }: { item: Item; meta: string[
       {labels && labels.length > 0 && <div className="labels">{labels.map((l) => <span key={l} className="label">{l}</span>)}</div>}
       {item.overview && <p className="summary-overview">{item.overview}</p>}
     </div>
+  );
+}
+
+/** The full-screen artwork behind the page, dimmed once the page scrolls past the top. */
+export function HeroBackdrop({ item, dim }: { item: Item; dim: boolean }) {
+  const art = useArtwork(backdropOf(item));
+  return (
+    <div className="hero-backdrop">
+      {art && <img className="hero-img fade-in" src={art} alt="" />}
+      <div className="hero-shade" />
+      <div className={`hero-dim${dim ? ' on' : ''}`} />
+    </div>
+  );
+}
+
+
+export function RoundButton({ icon, label, on, onClick, onLabel }: { icon: string; label: string; on?: boolean; onClick: () => void; onLabel: (l: string | null) => void }) {
+  return (
+    <Focusable className={`round-btn${on ? ' on' : ''}`} onClick={onClick} onFocus={() => onLabel(label)} onBlur={() => onLabel(null)}>
+      <Icon name={icon} size={40} />
+    </Focusable>
   );
 }

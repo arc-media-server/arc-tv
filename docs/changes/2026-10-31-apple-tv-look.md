@@ -29,3 +29,13 @@ is in the server's log.
 **Limits.** No frosted-glass blur (Chrome 53 has no backdrop-filter), so panels are near-opaque.
 The Arc logo left the sidebar for the profile row. Checked in desktop Chrome only. The Android app
 is to follow the same look (the owner will arrange it).
+
+**Home hero (owner's pick, 31 October).** Home opens on a full-screen hero, as the Apple TV app's:
+the first two titles of each row with artwork (one per title, at most six) take turns, each with
+its logo, details, labels and description, a Play button (Resume or Play S1 · E3 as the title page
+says; View for a show) and a round More Info button. Right from the last button and Left from the
+first move between titles (Left on the first title goes on to the sidebar), the next one comes by
+itself every nine seconds while the hero is in view, and dots show which is shown. The rows peek in
+below and scroll up over a dimmed copy of the artwork, as on a title's page; Home's rows no longer
+change the backdrop as the focus moves. The hero's backdrop and round button are shared with the
+title page (`HeroBackdrop`, `RoundButton` in `components/Backdrop.tsx`).

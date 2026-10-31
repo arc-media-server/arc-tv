@@ -266,9 +266,17 @@ p { margin: 0 0 16px; }
 
 /* Home */
 .home { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; }
-.home-summary { position: absolute; left: 192px; top: 72px; }
-.home-band { position: absolute; left: 0; right: 0; bottom: 24px; height: 560px; }
-.home-row { height: 560px; display: flex; flex-direction: column; justify-content: flex-end; }
+.home-page { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; }
+/* The hero fills the screen but for the first row's titles peeking in below it. */
+.home-hero { position: relative; height: 900px; padding: 0 192px; display: flex; flex-direction: column; justify-content: flex-end; }
+.home-hero-text { max-width: 1040px; }
+.home-hero-meta { margin-top: 20px; }
+.home-hero-overview { margin-top: 14px; }
+.home-hero-actions .actions { margin-top: 32px; }
+.home-hero-dots { position: absolute; left: 0; right: 0; bottom: 30px; display: flex; flex-direction: row; justify-content: center; }
+.hero-dot { width: 12px; height: 12px; border-radius: 6px; margin: 0 6px; background: rgba(255, 255, 255, 0.35); transition: width 0.3s, background-color 0.3s; }
+.hero-dot.on { width: 32px; background: #fff; }
+.home-row { padding-top: 12px; }
 .row-title { font-size: 34px; font-weight: 600; margin: 0 0 4px; }
 .row-loading { height: 200px; display: flex; align-items: center; }
 .row-failed { display: flex; flex-direction: row; align-items: center; height: 200px; }

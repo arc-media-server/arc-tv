@@ -1,8 +1,8 @@
 import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { api, type CollectionPage, type Item, type Season, type SeasonsResponse } from '../api';
-import { backdropOf, TitleLogo } from '../components/Backdrop';
+import { HeroBackdrop, RoundButton, TitleLogo } from '../components/Backdrop';
 import { cardFor, CardMenuContext, ExtraCard, MediaCard, PersonCard, Pressable, ProgressLine, Shelf, Strip, WatchBadge } from '../components/Cards';
-import { Artwork, useArtwork } from '../components/Artwork';
+import { Artwork } from '../components/Artwork';
 import { Icon } from '../components/Icon';
 import { Scroller } from '../components/Scroller';
 import { Button, Container, Focusable, useInitialFocus } from '../components/spot';
@@ -93,18 +93,6 @@ function EpisodeStrip({ episodes, focusId, onPlay }: { episodes: Item[]; focusId
   );
 }
 
-/** The full-screen artwork behind the page, dimmed once the page scrolls past the top. */
-function HeroBackdrop({ item, dim }: { item: Item; dim: boolean }) {
-  const art = useArtwork(backdropOf(item));
-  return (
-    <div className="hero-backdrop">
-      {art && <img className="hero-img fade-in" src={art} alt="" />}
-      <div className="hero-shade" />
-      <div className={`hero-dim${dim ? ' on' : ''}`} />
-    </div>
-  );
-}
-
 /** The Apple TV app's Information block at the foot of a title's page. */
 function InfoSection({ item }: { item: Item }) {
   const names = (role: string, n = 4) => (item.credits ?? []).filter((c) => c.role === role).slice(0, n).map((c) => c.name).join(', ');
@@ -138,13 +126,6 @@ function InfoSection({ item }: { item: Item }) {
   );
 }
 
-function RoundButton({ icon, label, on, onClick, onLabel }: { icon: string; label: string; on?: boolean; onClick: () => void; onLabel: (l: string | null) => void }) {
-  return (
-    <Focusable className={`round-btn${on ? ' on' : ''}`} onClick={onClick} onFocus={() => onLabel(label)} onBlur={() => onLabel(null)}>
-      <Icon name={icon} size={40} />
-    </Focusable>
-  );
-}
 
 export function Details({ id, episodeId }: { id: string; episodeId?: string }) {
   const nav = useNav();
