@@ -34,8 +34,9 @@ scripts/              packaging and the bundle check
 ```
 
 The build picks the platform file at compile time (`vite build --mode webos|tizen|browser`), so
-each package carries only its own code. TVs from 2019–2020 run Chrome 68–69 engines, so the bundle
-targets Chrome 68, includes core-js for missing built-ins, and is one classic script (TVs load
+each package carries only its own code. The oldest supported TVs, LG's 2019 sets (webOS 4.5, e.g. the
+C9), run a Chrome 53 engine, so the bundle targets Chrome 53, includes core-js and an
+AbortController polyfill for missing built-ins, and is one classic script (TVs load
 packaged apps from `file://`, where module scripts are refused). `npm run check` type-checks, builds
 both TV bundles and fails if either uses newer syntax.
 

@@ -65,7 +65,7 @@ const webos: Platform = {
   },
   remoteKey: (code) => keys[code] ?? null,
   async caps() {
-    // webOS major version from the SDK: 5 = 2020, 6 = 2021, 7 = webOS 22, 8 = webOS 23, 9 = webOS 24.
+    // webOS major version from the SDK: 4 = 2018–2019 (4.5 on the C9/B9), 5 = 2020, 6 = 2021, 7 = webOS 22, 8 = webOS 23, 9 = webOS 24.
     // A starting table from LG's published specs; to be checked on real TVs (#135).
     const { sdkVersion, UHD } = await systemInfo();
     const major = parseInt(sdkVersion ?? '0', 10) || 0;
@@ -82,7 +82,7 @@ const webos: Platform = {
     };
     if (major >= 6) caps.video.push('av1');
     // LG dropped DTS from 2020 to 2022 models and brought it back in 2023.
-    if (major >= 8) caps.audio.push('dts');
+    if (major >= 8 || (major > 0 && major <= 4)) caps.audio.push('dts');
     return caps;
   },
   createPlayer: (host) => videoPlayer(host),

@@ -8,6 +8,6 @@ without evidence.
 - Talk to Arc only through `/api/v1` (`docs/api-v1-contract.txt` in Arc). If the app needs something
   the API lacks, add it to Arc in its own PR.
 - Shared code goes in `src/`; anything that differs between TVs goes behind `src/platform/types.ts`.
-- Keep the bundle loadable on Chrome 68 from `file://`: run `npm run check` before every PR.
+- Keep the bundle loadable on Chrome 53 (LG webOS 4.5, the owner's C9) from `file://`; no CSS grid or flex `gap`: run `npm run check` before every PR.
 - Spotlight (from Enact) handles focus; import its pieces by name (the packages are CommonJS).
 - Never commit signing material (Samsung certificates, LG seller details).

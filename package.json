@@ -18,6 +18,7 @@
   "dependencies": {
     "@enact/core": "^5.6.0",
     "@enact/spotlight": "^5.6.0",
+    "abortcontroller-polyfill": "^1.7.8",
     "core-js": "^3.51.0",
     "hls.js": "^1.7.4",
     "react": "^19.3.1",

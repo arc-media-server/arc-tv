@@ -1,5 +1,6 @@
-// Checks the TV bundles only use JavaScript that 2019–2020 TVs (Chrome 68) understand: it must
-// parse as ES2019 (Chrome 66+ syntax; built-ins come from core-js), and must be a classic script (TVs load packaged apps from file://).
+// Checks the TV bundles only use JavaScript syntax that 2019 TVs (LG webOS 4.5, Chrome 53)
+// understand: it must parse as ES2016 (built-ins come from core-js), and must be a classic
+// script (TVs load packaged apps from file://).
 import { readFileSync, existsSync } from 'node:fs';
 import { parse } from 'acorn';
 
@@ -13,10 +14,10 @@ for (const platform of ['webos', 'tizen']) {
     continue;
   }
   try {
-    parse(readFileSync(js, 'utf8'), { ecmaVersion: 2019, sourceType: 'script' });
-    console.log(`${js}: parses as ES2019`);
+    parse(readFileSync(js, 'utf8'), { ecmaVersion: 2016, sourceType: 'script' });
+    console.log(`${js}: parses as ES2016`);
   } catch (e) {
-    console.error(`${js}: not ES2019 (${e.message})`);
+    console.error(`${js}: not ES2016 (${e.message})`);
     failed = true;
   }
   if (/type="module"/.test(readFileSync(html, 'utf8'))) {
