@@ -1,5 +1,5 @@
 import { Spotlight } from '@enact/spotlight';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { Icon } from './Icon';
 import { useBack } from '../lib/back';
 import { focusElement, Focusable, Trap } from './spot';
@@ -93,22 +93,33 @@ export function MenuHeading({ children }: { children: ReactNode }) {
 export function Popover({ title, onClose, children }: { title?: string; onClose: () => void; children: ReactNode }) {
   const id = useFocusTrap();
   useBack(() => { onClose(); });
-  // Where the opener is, read once as the menu opens (the focus is still on it then).
+  // Where the opener is, read once as the menu opens (the focus is still on it then): the menu's
+  // top lines up with the opener's top, moved up only as far as it takes to fit on screen.
   const [at] = useState(() => {
     const el = Spotlight.getCurrent() as HTMLElement | null;
     const r = el ? el.getBoundingClientRect() : null;
     const scale = window.innerWidth / 1920 || 1;
-    if (!r) return { left: 700, top: 300 };
+    if (!r) return { left: 680, top: 300 };
     const right = r.right / scale + 28;
     const left = right + POPOVER_WIDTH <= 1880 ? right : Math.max(40, r.left / scale - 28 - POPOVER_WIDTH);
-    return { left, top: Math.max(40, Math.min(r.top / scale, 1080 - 40 - 560)) };
+    // The focused card is drawn enlarged: line up with its resting top, not the grown one.
+    const restingTop = (r.top + r.height / 2) / scale - (el ? el.offsetHeight : 0) / 2;
+    return { left, top: Math.max(40, restingTop) };
   });
+  const box = useRef<HTMLDivElement>(null);
+  const [top, setTop] = useState(at.top);
+  useLayoutEffect(() => {
+    const h = box.current ? box.current.offsetHeight : 0;
+    setTop(Math.max(40, Math.min(at.top, 1040 - h)));
+  }, [at.top]);
   return (
     <div className="popover-shade">
-      <Trap spotlightId={id} className="popover" style={{ left: at.left, top: at.top, width: POPOVER_WIDTH }}>
-        {title && <div className="popover-title">{title}</div>}
-        {children}
-      </Trap>
+      <div ref={box} className="popover-place" style={{ left: at.left, top, width: POPOVER_WIDTH }}>
+        <Trap spotlightId={id} className="popover">
+          {title && <div className="popover-title">{title}</div>}
+          {children}
+        </Trap>
+      </div>
     </div>
   );
 }
