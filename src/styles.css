@@ -71,7 +71,7 @@ p { margin: 0 0 16px; }
 }
 .btn .icon { margin-right: 14px; }
 .btn.primary { background: var(--text); color: var(--bg); }
-.btn:focus { background: var(--text); color: var(--bg); box-shadow: 0 0 36px rgba(11, 125, 114, 0.6); }
+.btn:focus { background: var(--text); color: var(--bg); box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45); }
 .btn.selected { background: var(--accent-strong); }
 .btn.small { height: 72px; padding: 0 32px; font-size: 26px; margin-left: 20px; }
 .server { flex-direction: column; align-items: flex-start; height: auto; padding: 24px 40px; border-radius: 24px; }
@@ -146,7 +146,7 @@ p { margin: 0 0 16px; }
 .card-thumb { width: 344px; }
 .card-backdrop { width: 400px; }
 .card-face { position: relative; border-radius: 20px; overflow: hidden; background: var(--surface); }
-.card-face.spottable:focus { transform: scale(1.08); box-shadow: 0 0 0 6px var(--text), 0 0 40px 8px rgba(11, 125, 114, 0.55); }
+.card-face.spottable:focus { transform: scale(1.08); box-shadow: 0 0 0 6px var(--text), 0 24px 48px rgba(0, 0, 0, 0.55); }
 .card-caption { margin-top: 16px; min-height: 76px; }
 .card-title { font-size: 26px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: rgba(245, 245, 247, 0.85); }
 .card-sub { font-size: 24px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
@@ -311,7 +311,7 @@ p { margin: 0 0 16px; }
 .actions > * { margin-right: 28px; }
 .round-btn { width: 96px; height: 96px; border-radius: 50%; background: rgba(42, 42, 53, 0.7); display: flex; align-items: center; justify-content: center; color: var(--text); }
 .round-btn.on { color: var(--accent); }
-.round-btn.spottable:focus { background: var(--text); color: var(--bg); box-shadow: 0 0 36px rgba(11, 125, 114, 0.6); }
+.round-btn.spottable:focus { background: var(--text); color: var(--bg); box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45); }
 .action-label { height: 56px; padding-top: 16px; font-size: 26px; font-weight: 600; color: rgba(245, 245, 247, 0.8); }
 .seasons { padding-top: 8px; }
 .seasons .tabs { margin-bottom: 4px; }
