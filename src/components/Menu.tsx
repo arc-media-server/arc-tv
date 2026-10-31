@@ -90,33 +90,46 @@ export function MenuHeading({ children }: { children: ReactNode }) {
  * A title's menu as the Apple TV app draws its context menus: a floating rounded list beside what
  * opened it (the focused card or button), each choice's name on the left and its icon on the right.
  */
-export function Popover({ title, onClose, children }: { title?: string; onClose: () => void; children: ReactNode }) {
+export function Popover({ title, body, place = 'side', shade = true, onClose, children }: {
+  title?: string;
+  body?: string;
+  /** 'side': beside the opener, tops level (a card's menu). 'above': over it, right edges level (the player's menus). */
+  place?: 'side' | 'above';
+  shade?: boolean;
+  onClose: () => void;
+  children: ReactNode;
+}) {
   const id = useFocusTrap();
   useBack(() => { onClose(); });
-  // Where the opener is, read once as the menu opens (the focus is still on it then): the menu's
-  // top lines up with the opener's top, moved up only as far as it takes to fit on screen.
+  // Where the opener is, read once as the menu opens (the focus is still on it then).
   const [at] = useState(() => {
     const el = Spotlight.getCurrent() as HTMLElement | null;
     const r = el ? el.getBoundingClientRect() : null;
     const scale = window.innerWidth / 1920 || 1;
-    if (!r) return { left: 680, top: 300 };
+    if (!r) return { left: 680, top: 300, above: 0 };
+    if (place === 'above') {
+      const left = Math.max(40, Math.min(1880 - POPOVER_WIDTH, r.right / scale - POPOVER_WIDTH));
+      return { left, top: 40, above: r.top / scale - 24 };
+    }
     const right = r.right / scale + 28;
     const left = right + POPOVER_WIDTH <= 1880 ? right : Math.max(40, r.left / scale - 28 - POPOVER_WIDTH);
     // The focused card is drawn enlarged: line up with its resting top, not the grown one.
     const restingTop = (r.top + r.height / 2) / scale - (el ? el.offsetHeight : 0) / 2;
-    return { left, top: Math.max(40, restingTop) };
+    return { left, top: Math.max(40, restingTop), above: 0 };
   });
   const box = useRef<HTMLDivElement>(null);
   const [top, setTop] = useState(at.top);
   useLayoutEffect(() => {
     const h = box.current ? box.current.offsetHeight : 0;
-    setTop(Math.max(40, Math.min(at.top, 1040 - h)));
-  }, [at.top]);
+    // Level with the opener (or ending just above it), moved only as far as it takes to fit.
+    setTop(Math.max(40, Math.min(at.above ? at.above - h : at.top, 1040 - h)));
+  }, [at.top, at.above]);
   return (
-    <div className="popover-shade">
+    <div className={shade ? 'popover-shade' : 'popover-layer'}>
       <div ref={box} className="popover-place" style={{ left: at.left, top, width: POPOVER_WIDTH }}>
         <Trap spotlightId={id} className="popover">
           {title && <div className="popover-title">{title}</div>}
+          {body && <div className="popover-body">{body}</div>}
           {children}
         </Trap>
       </div>
@@ -126,11 +139,14 @@ export function Popover({ title, onClose, children }: { title?: string; onClose:
 
 const POPOVER_WIDTH = 560;
 
-export function PopoverItem({ icon, label, onClick, first }: { icon: string; label: string; onClick: () => void; first?: boolean }) {
+export function PopoverItem({ icon, label, detail, onClick, first }: { icon: string; label: string; detail?: string; onClick: () => void; first?: boolean }) {
   return (
-    <Focusable className="popover-item" onClick={onClick} data-default={first || undefined}>
-      <span className="popover-label">{label}</span>
-      <Icon name={icon} size={30} />
+    <Focusable className={`popover-item${detail ? ' with-detail' : ''}`} onClick={onClick} data-default={first || undefined}>
+      <span className="popover-text">
+        <span className="popover-label">{label}</span>
+        {detail && <span className="popover-detail">{detail}</span>}
+      </span>
+      {icon ? <Icon name={icon} size={30} /> : <span className="popover-noicon" />}
     </Focusable>
   );
 }

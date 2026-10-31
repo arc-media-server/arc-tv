@@ -11,12 +11,13 @@ import { prefs as loadPrefs } from '../lib/store';
 import { HomeContent } from './Home';
 import { LibraryContent, WatchlistContent } from './Library';
 import { SearchContent } from './Search';
+import { SettingsContent } from './Settings';
 
 // The main screen, as the Android app's BrowseScreen: a rail down the left (Search, Home, the
 // libraries with the Watchlist where the profile put it, and the profile at the bottom) that opens
 // into labels when it has the focus, and the chosen section beside it.
 
-export type Section = { kind: 'home' } | { kind: 'search' } | { kind: 'watchlist' } | { kind: 'library'; id: number };
+export type Section = { kind: 'home' } | { kind: 'search' } | { kind: 'watchlist' } | { kind: 'settings' } | { kind: 'library'; id: number };
 
 const same = (a: Section, b: Section) => a.kind === b.kind && (a.kind !== 'library' || a.id === (b as { id: number }).id);
 
@@ -67,10 +68,12 @@ function Clock() {
 
 interface Frame { libraries: Library[]; watchlistAt: number }
 
-export function Browse({ profile, canSwitchProfile, onSwitchProfile, onSignOut }: {
+export function Browse({ profile, canSwitchProfile, serverName, onSwitchProfile, onSwitchServer, onSignOut }: {
   profile: Profile | null;
   canSwitchProfile: boolean;
+  serverName: string;
   onSwitchProfile: () => void;
+  onSwitchServer: () => void;
   onSignOut: () => void;
 }) {
   const active = useActive();
@@ -143,6 +146,7 @@ export function Browse({ profile, canSwitchProfile, onSwitchProfile, onSignOut }
         {section.kind === 'home' && <HomeContent prefs={prefs} libraries={frame.libraries} visits={visits} onReady={ready} />}
         {section.kind === 'search' && <SearchContent onReady={ready} />}
         {section.kind === 'watchlist' && <WatchlistContent visits={visits} onReady={ready} />}
+        {section.kind === 'settings' && <SettingsContent serverName={serverName} onSwitchServer={onSwitchServer} onSignOut={onSignOut} onReady={ready} />}
         {lib && <LibraryContent key={lib.id} library={lib} visits={visits} onReady={ready} />}
       </Container>
       <EntryContainer
@@ -159,6 +163,8 @@ export function Browse({ profile, canSwitchProfile, onSwitchProfile, onSignOut }
         <SidebarItem icon={<Icon name="search" />} label={t('nav.search')} selected={section.kind === 'search'} onClick={() => show({ kind: 'search' })} />
         <SidebarItem icon={<Icon name="home" />} label={t('nav.home')} selected={section.kind === 'home'} onClick={() => show({ kind: 'home' })} />
         {items}
+        <div className="side-spacer" />
+        <SidebarItem icon={<Icon name="gear" />} label={t('nav.settings')} selected={section.kind === 'settings'} onClick={() => show({ kind: 'settings' })} />
       </EntryContainer>
     </div>
   );

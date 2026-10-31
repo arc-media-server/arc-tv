@@ -188,7 +188,9 @@ function App() {
           <Browse
             profile={status?.profile ?? null}
             canSwitchProfile={!status?.friend}
+            serverName={server?.name ?? ''}
             onSwitchProfile={() => push({ name: 'profiles' })}
+            onSwitchServer={() => { void signOut().then(() => { forgetServer(); reset({ name: 'servers' }); }); }}
             onSignOut={() => void signOut()}
           />
         );
