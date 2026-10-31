@@ -1,0 +1,10 @@
+node_modules/
+dist/
+out/
+*.ipk
+*.wgt
+# Signing material never goes in git.
+*.p12
+author.p12
+distributor.p12
+.tizen-profile/
