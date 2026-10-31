@@ -70,7 +70,7 @@ real TV (the emulators have no real decoders).
 1. Create a free account at LG's developer site, install the **Developer Mode** app on the TV from
    the LG Content Store, sign in there and turn Dev Mode on (the session runs out after a while;
    extend it in the same app).
-2. `npm i -g @webos-tools/cli` (or use the copy in devDependencies via `npx`), then
+2. `npm i -g @webos-tools/cli` (or the optional copy this repo installs, via `npx`), then
    `ares-setup-device` to add the TV with the passphrase the Developer Mode app shows.
 3. `npm run package:webos`, then
    `ares-install -d <tv> out/webos/org.arcmediaserver.tv_0.1.0_all.ipk` and
