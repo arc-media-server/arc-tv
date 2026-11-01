@@ -161,10 +161,11 @@ async function edit(op: string, fields: Record<string, unknown> = {}): Promise<P
 
 export const queues = {
   refresh: () => locked(async () => { const q = await apiOrNull<PlayQueue>('/play-queues/current'); queue.set(q); return q; }),
-  /** Starts a new queue of these titles (a show adds its episodes), replacing the last one. */
-  start: (ids: string[]) => locked(async () => {
+  /** Starts a new queue of these titles (a show adds its episodes) or a playlist's, replacing the last one. */
+  start: (from: string[] | { playlistId: string }) => locked(async () => {
     const q = queue.get();
-    const next = await api<PlayQueue>('/play-queues', { method: 'POST', body: { item_ids: ids, ...(q ? { replace_id: q.id, revision: q.revision } : {}) } });
+    const what = Array.isArray(from) ? { item_ids: from } : { playlist_id: from.playlistId };
+    const next = await api<PlayQueue>('/play-queues', { method: 'POST', body: { ...what, ...(q ? { replace_id: q.id, revision: q.revision } : {}) } });
     queue.set(next);
     return next;
   }),
