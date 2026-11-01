@@ -264,5 +264,6 @@
   "player.retry": "Try Again",
   "player.cancel": "Cancel",
   "person.empty": "Nothing in your libraries with them yet.",
+  "collection.playFailed": "Couldn't start playing this collection.",
   "collection.empty": "This collection is empty."
 }
