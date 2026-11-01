@@ -32,7 +32,7 @@ type Screen =
   | { name: 'collection'; id: string }
   | { name: 'playlist'; id: string }
   | { name: 'person'; id: number }
-  | { name: 'player'; item: Item; startMs: number; entryId?: string; carryOn?: boolean }
+  | { name: 'player'; item: Item; startMs: number; entryId?: string; carryOn?: boolean; fileId?: number }
   | { name: 'extra'; extra: Extra };
 
 type Entry = { key: number; screen: Screen; focus?: HTMLElement | null };
@@ -136,7 +136,7 @@ function App() {
   const nav = useMemo<Nav>(() => ({
     open: (it) => push(it.kind === 'episode' && it.parent_id ? { name: 'details', id: it.parent_id, episodeId: it.id } : { name: 'details', id: it.id }),
     play: (item, startMs, opts: PlayOptions = {}) => {
-      const s: Screen = { name: 'player', item, startMs, entryId: opts.entryId, carryOn: opts.carryOn };
+      const s: Screen = { name: 'player', item, startMs, entryId: opts.entryId, carryOn: opts.carryOn, fileId: opts.fileId };
       if (opts.replace) replace(s);
       else push(s);
     },
@@ -206,7 +206,7 @@ function App() {
       case 'person':
         return <PersonPage id={s.id} />;
       case 'player':
-        return <Player item={s.item} startMs={s.startMs} entryId={s.entryId} carryOn={s.carryOn} />;
+        return <Player item={s.item} startMs={s.startMs} entryId={s.entryId} carryOn={s.carryOn} fileId={s.fileId} />;
       case 'extra':
         return <ExtraPlayer extra={s.extra} />;
     }
