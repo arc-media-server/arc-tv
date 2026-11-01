@@ -151,6 +151,11 @@ p { margin: 0 0 16px; }
 .card-thumb { width: 344px; }
 .card-backdrop { width: 400px; }
 .card-face { position: relative; border-radius: 20px; overflow: hidden; background: var(--surface); }
+.card-tag {
+  position: absolute; top: 12px; left: 12px; display: flex; align-items: center; padding: 4px 10px; border-radius: 8px;
+  background: rgba(0, 0, 0, 0.6); color: #fff; font-size: 20px; font-weight: 600;
+}
+.card-tag .icon { margin-right: 6px; }
 .card-face.spottable:focus { transform: scale(1.08); box-shadow: 0 0 0 6px var(--text), 0 24px 48px rgba(0, 0, 0, 0.55); }
 .card-caption { margin-top: 16px; min-height: 76px; }
 .card-title { font-size: 26px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: rgba(245, 245, 247, 0.85); }
@@ -309,6 +314,7 @@ p { margin: 0 0 16px; }
 .head-buttons .btn:focus { background: var(--text); }
 .tab.spottable:focus { background: var(--text); color: var(--bg); transform: none; box-shadow: none; }
 .page-note { padding-left: 192px; padding-top: 32px; }
+.folder-trail { position: absolute; top: 8px; left: 0; right: 0; font-size: 26px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .library-body, .library-titles { position: absolute; top: 150px; left: 0; right: 0; bottom: 0; }
 .person-titles { top: 190px; }
 .library-body .scroller-inner { padding-top: 12px; padding-bottom: 60px; }
