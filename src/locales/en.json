@@ -145,6 +145,8 @@
   "search.shows": "Shows",
   "search.people": "People",
   "search.episodes": "Episodes",
+  "search.collections": "Collections",
+  "search.genres": "Genres",
   "person.titles": "{{n}} titles",
   "watchlist.empty": "Nothing on your Watchlist yet. Add a movie or show from its page.",
   "details.season": "Season {{n}}",
