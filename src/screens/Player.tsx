@@ -89,7 +89,7 @@ function methodLabel(p: Playback): [string, string] {
   return [t('method.convertingTitle'), body];
 }
 
-export function Player({ item: start, startMs, entryId, carryOn }: { item: Item; startMs: number; entryId?: string; carryOn?: boolean }) {
+export function Player({ item: start, startMs, entryId, carryOn, fileId }: { item: Item; startMs: number; entryId?: string; carryOn?: boolean; fileId?: number }) {
   const nav = useNav();
   const host = useRef<HTMLDivElement>(null);
   const player = useRef<NativePlayer | null>(null);
@@ -247,7 +247,7 @@ export function Player({ item: start, startMs, entryId, carryOn }: { item: Item;
       setStyle(p.subtitle_style ?? {});
       return p;
     });
-    void ready.then(() => { if (live) void load(startMs); });
+    void ready.then(() => { if (live) void load(startMs, { fileId }); });
     void (async () => {
       const full = await api<Item>(`/items/${enc(itemId)}`).catch(() => null);
       if (!live) return;

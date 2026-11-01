@@ -8,6 +8,8 @@ export interface PlayOptions {
   entryId?: string;
   /** Auto-Play's next episode: it joins the end of the queue rather than starting a new one. */
   carryOn?: boolean;
+  /** Which version (file) to play, chosen with Play Version… on the title's page. */
+  fileId?: number;
   /** Replace the current screen (the player moving on to the next title). */
   replace?: boolean;
 }
