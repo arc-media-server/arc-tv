@@ -175,7 +175,7 @@ export function HomeContent({ prefs, libraries, visits, onReady }: { prefs: Pref
         {visible.map((spec) => {
           const st = stateOf(spec);
           return (
-            <section key={spec.id} className="home-row" data-section>
+            <section key={spec.id} className="home-row" data-section data-row={spec.id}>
               <h2 className="row-title" style={{ paddingLeft: START }}>{rowTitle(spec)}</h2>
               {!st.cards && !st.error && <div className="row-loading" style={{ paddingLeft: START }}><div className="spinner" /></div>}
               {!st.cards && st.error && (
