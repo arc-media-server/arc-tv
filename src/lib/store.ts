@@ -45,6 +45,24 @@ function undo(id: string, prev: Change | undefined) {
   changes.set(next);
 }
 
+// --- Titles taken out of Continue Watching in this session, left off the row at once ---
+
+const offContinue = store<Record<string, true>>({});
+export function useOffContinue() { return offContinue.use(); }
+
+/** Takes a title out of Continue Watching (and Up Next) without marking it watched, as the web's card menu. */
+export async function removeFromContinue(it: Item) {
+  offContinue.set({ ...offContinue.get(), [it.id]: true });
+  try {
+    await api(`/home/continue/${encodeURIComponent(it.id)}`, { method: 'DELETE' });
+  } catch (e) {
+    const next = { ...offContinue.get() };
+    delete next[it.id];
+    offContinue.set(next);
+    throw e;
+  }
+}
+
 /** Marks watched or not; shows at once, put back if Arc refuses. Throws so the caller can say so. */
 export async function setPlayed(it: Item, played: boolean) {
   const prev = changes.get()[it.id];
@@ -165,6 +183,20 @@ export const queues = {
     if (!q) return null;
     const at = q.entries.findIndex((e) => e.id === q.current_entry_id);
     return edit(at >= 0 && q.entries[at + 1]?.id === entryId ? 'advance' : 'select', { entry_id: entryId });
+  }),
+  /** Takes an entry out of the queue (not the one playing). */
+  remove: (entryId: string) => locked(() => edit('remove', { entry_ids: [entryId] })),
+  /** Moves an entry one place earlier (-1) or later (+1), staying after the one playing. */
+  move: (entryId: string, by: -1 | 1) => locked(async () => {
+    const q = queue.get();
+    if (!q) return null;
+    const ids = q.entries.map((e) => e.id);
+    const at = ids.indexOf(entryId);
+    const to = at + by;
+    if (at < 0 || to <= ids.indexOf(q.current_entry_id) || to >= ids.length) return q;
+    ids[at] = ids[to];
+    ids[to] = entryId;
+    return edit('reorder', { entry_ids: ids });
   }),
   /** A queue played to its end is deleted. */
   end: () => locked(async () => {

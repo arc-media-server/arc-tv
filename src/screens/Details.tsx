@@ -1,4 +1,4 @@
-import { useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { api, type CollectionPage, type Item, type Season, type SeasonsResponse } from '../api';
 import { HeroBackdrop, RoundButton, TitleLogo } from '../components/Backdrop';
 import { cardFor, CardMenuContext, ExtraCard, MediaCard, PersonCard, Pressable, ProgressLine, Shelf, Strip, WatchBadge } from '../components/Cards';
@@ -6,7 +6,7 @@ import { Artwork } from '../components/Artwork';
 import { Icon } from '../components/Icon';
 import { Scroller } from '../components/Scroller';
 import { Button, Container, Focusable, useInitialFocus } from '../components/spot';
-import { Popover, PopoverItem } from '../components/Menu';
+import { Overlay, Popover, PopoverItem } from '../components/Menu';
 import { MediaInfo, MoreMenu, toggleWatched, toggleWatchlist, useCanQueue } from '../components/TitleMenu';
 import { formatRuntime, formatTime, t } from '../i18n';
 import { episodeCode, formatLabels, languageName, resumeMs, versionLabel, versionsOf, watched } from '../lib/format';
@@ -42,26 +42,67 @@ function shuffled<T>(list: T[]): T[] {
   return out;
 }
 
-/** An episode: its picture with progress and a tick, its number and name, its length, and (focused) its description. */
+/**
+ * An episode as the Apple TV app shows one: its picture with progress and a tick, then its number,
+ * its name, a few lines of its description, and its length (or what's left of it).
+ */
 function EpisodeCard({ ep, first, onPlay }: { ep: Item; first: boolean; onPlay: () => void }) {
-  const [focused, setFocused] = useState(false);
   const menu = useContext(CardMenuContext);
   const card = cardFor(ep);
-  const sub = [ep.runtime_min ? formatRuntime(ep.runtime_min) : '', ep.available === false ? t('details.missing') : ''].filter(Boolean).join(' · ');
+  const pos = resumeMs(ep);
+  const length = ep.runtime_min
+    ? pos > 0 ? t('details.timeLeft', { time: formatRuntime(Math.max(1, Math.round(ep.runtime_min - pos / 60000))) }) : formatRuntime(ep.runtime_min)
+    : '';
+  const sub = [length, ep.available === false ? t('details.missing') : ''].filter(Boolean).join(' · ');
   return (
     <div className="card card-thumb episode-card">
-      <Pressable className="card-face" onClick={onPlay} onHold={menu ? (el) => menu(ep, el) : undefined} data-default={first || undefined}
-        onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}>
+      <Pressable className="card-face" onClick={onPlay} onHold={menu ? (el) => menu(ep, el) : undefined} data-default={first || undefined}>
         <Artwork path={card.thumb} label={ep.title} className="ratio-16x9" />
         <WatchBadge item={ep} />
         <ProgressLine progress={card.progress} />
       </Pressable>
       <div className="card-caption">
-        <div className="card-title">{[ep.episode_number !== undefined ? `${ep.episode_number}.` : '', ep.title].filter(Boolean).join(' ')}</div>
+        {ep.episode_number !== undefined && <div className="episode-kicker">{t('details.episodeN', { n: ep.episode_number })}</div>}
+        <div className="card-title">{ep.title}</div>
+        {ep.overview && <div className="episode-overview">{ep.overview}</div>}
         {sub && <div className="card-sub">{sub}</div>}
-        <div className="episode-overview">{focused && ep.overview}</div>
       </div>
     </div>
+  );
+}
+
+/**
+ * The description beside the buttons: three lines, and when that cuts it short, focusable with
+ * MORE at its end to open the whole text, as the Apple TV app.
+ */
+function About({ item, meta }: { item: Item; meta: string }) {
+  const text = useRef<HTMLParagraphElement>(null);
+  const [cut, setCut] = useState(false);
+  const [open, setOpen] = useState(false);
+  useLayoutEffect(() => {
+    const el = text.current;
+    setCut(!!el && el.scrollHeight > el.clientHeight + 2);
+  }, [item.overview]);
+  const body = (
+    <>
+      {item.overview && <p ref={text} className="hero-overview">{item.overview}</p>}
+      {cut && <span className="hero-more">{t('details.more')}</span>}
+      <div className="hero-meta">
+        <span>{meta}</span>
+        {formatLabels(item.files).map((l) => <span key={l} className="label">{l}</span>)}
+      </div>
+    </>
+  );
+  return (
+    <>
+      {cut ? <Focusable className="hero-about can-open" onClick={() => setOpen(true)}>{body}</Focusable> : <div className="hero-about">{body}</div>}
+      {open && (
+        <Overlay width={1100} onClose={() => setOpen(false)}>
+          <div className="overlay-title">{item.title}</div>
+          <Focusable className="about-text" onClick={() => setOpen(false)}>{item.overview}</Focusable>
+        </Overlay>
+      )}
+    </>
   );
 }
 
@@ -254,13 +295,7 @@ export function Details({ id, episodeId }: { id: string; episodeId?: string }) {
               </Container>
               <div className="action-label">{label}</div>
             </div>
-            <div className="hero-about">
-              {item.overview && <p className="hero-overview">{item.overview}</p>}
-              <div className="hero-meta">
-                <span>{meta.filter(Boolean).join(' · ')}</span>
-                {formatLabels(item.files).map((l) => <span key={l} className="label">{l}</span>)}
-              </div>
-            </div>
+            <About item={item} meta={meta.filter(Boolean).join(' · ')} />
           </div>
         </section>
         {series && seasons && <Seasons key={initialSeason} seasons={seasons} initial={initialSeason} focusId={focusEp?.id} onPlay={(ep) => nav.play(ep, resumeMs(ep))} />}
