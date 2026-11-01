@@ -184,6 +184,20 @@ export const queues = {
     const at = q.entries.findIndex((e) => e.id === q.current_entry_id);
     return edit(at >= 0 && q.entries[at + 1]?.id === entryId ? 'advance' : 'select', { entry_id: entryId });
   }),
+  /** Takes an entry out of the queue (not the one playing). */
+  remove: (entryId: string) => locked(() => edit('remove', { entry_ids: [entryId] })),
+  /** Moves an entry one place earlier (-1) or later (+1), staying after the one playing. */
+  move: (entryId: string, by: -1 | 1) => locked(async () => {
+    const q = queue.get();
+    if (!q) return null;
+    const ids = q.entries.map((e) => e.id);
+    const at = ids.indexOf(entryId);
+    const to = at + by;
+    if (at < 0 || to <= ids.indexOf(q.current_entry_id) || to >= ids.length) return q;
+    ids[at] = ids[to];
+    ids[to] = entryId;
+    return edit('reorder', { entry_ids: ids });
+  }),
   /** A queue played to its end is deleted. */
   end: () => locked(async () => {
     const q = queue.get();
