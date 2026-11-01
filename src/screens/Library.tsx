@@ -9,13 +9,14 @@ import { Button, Container, Focusable, focusElement } from '../components/spot';
 import { t, tMaybe } from '../i18n';
 import type { Card } from '../lib/home';
 import { useNav } from '../lib/nav';
+import { VideoFolders } from './Folders';
 import { START } from './Home';
 
 // A library, as the Android app's LibraryContent and Plex's TV app: its name and tabs
-// (Recommended, its titles, Collections), then the chosen tab. The titles have the web's sort and
+// (Recommended, its titles, Folders for home videos, Collections), then the chosen tab. The titles have the web's sort and
 // filters, and an A–Z bar down the right while they're sorted by title.
 
-type Tab = 'recommended' | 'titles' | 'collections';
+type Tab = 'recommended' | 'titles' | 'folders' | 'collections';
 
 export interface LibraryQuery { sort: string; reverse: boolean; unwatched: boolean; genre?: string; decade?: number; resolution?: string }
 
@@ -281,10 +282,14 @@ export function LibraryContent({ library, visits, onReady }: { library: Library;
   const tabs: { id: Tab; label: string }[] = [];
   if (library.kind !== 'videos') tabs.push({ id: 'recommended', label: t('library.recommended') });
   tabs.push({ id: 'titles', label: t(library.kind === 'shows' ? 'library.shows' : library.kind === 'videos' ? 'library.videos' : 'library.movies') });
+  // Home videos can be browsed folder by folder too, as on the web.
+  if (library.kind === 'videos') tabs.push({ id: 'folders', label: t('library.folders') });
   if (collections.value?.length) tabs.push({ id: 'collections', label: t('library.collections') });
   const shown = tabs.some((x) => x.id === tab) ? tab : 'titles';
 
-  const readyNow = shown === 'titles' ? total !== null : shown === 'recommended' ? !!recommended.value || !!recommended.error : !!collections.value;
+  const [foldersReady, setFoldersReady] = useState(false);
+  const foldersLoaded = useCallback(() => setFoldersReady(true), []);
+  const readyNow = shown === 'titles' ? total !== null : shown === 'folders' ? foldersReady : shown === 'recommended' ? !!recommended.value || !!recommended.error : !!collections.value;
   useEffect(() => {
     if (readyNow && !told.current) {
       told.current = true;
@@ -338,6 +343,7 @@ export function LibraryContent({ library, visits, onReady }: { library: Library;
         : recommended.value
           ? <RecommendedView rows={recommended.value} lib={library} onOpen={(it) => nav.open(it)} />
           : <div className="page-note"><div className="spinner" /></div>)}
+      {shown === 'folders' && <VideoFolders library={library} onLoaded={foldersLoaded} />}
       {shown === 'collections' && collections.value && (
         <div className="library-titles">
           <TitleGrid

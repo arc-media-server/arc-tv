@@ -5,6 +5,7 @@ import { cardFor, type Card, type CardStyle } from '../lib/home';
 import { episodeCode } from '../lib/format';
 import { useChanges, withChanges } from '../lib/store';
 import { Artwork, useArtwork } from './Artwork';
+import { Icon } from './Icon';
 import { Focusable } from './spot';
 import { Scroller } from './Scroller';
 
@@ -137,6 +138,7 @@ export function MediaCard({ card, look = 'poster', seasonPoster, caption = true,
         data-default={first || undefined}
       >
         {look === 'backdrop' ? <BackdropArt card={shown} /> : shown.mosaic && shown.mosaic.length >= 4 ? <Mosaic paths={shown.mosaic} /> : <Artwork path={art} label={cardTitle(shown)} className={thumb ? 'ratio-16x9' : 'ratio-2x3'} />}
+        {shown.tag && <span className="card-tag"><Icon name="folder" size={20} /> {shown.tag}</span>}
         <WatchBadge item={item} />
         <ProgressLine progress={shown.progress} />
       </Pressable>

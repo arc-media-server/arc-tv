@@ -42,6 +42,8 @@ export interface Card {
   mosaic?: string[];
   /** The line under the title, when it isn't the title's own (a playlist's count). */
   sub?: string;
+  /** A label over the picture's corner (a home videos folder's "Folder"). */
+  tag?: string;
 }
 
 type Seasonal = 'romance' | 'horror' | 'christmas';
