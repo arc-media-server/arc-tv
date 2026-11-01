@@ -38,6 +38,10 @@ export interface Card {
   progress?: number;
   /** A Queue row card: the entry it stands for. */
   queueEntry?: string;
+  /** A playlist's picture: up to four of its titles' posters, two by two. */
+  mosaic?: string[];
+  /** The line under the title, when it isn't the title's own (a playlist's count). */
+  sub?: string;
 }
 
 type Seasonal = 'romance' | 'horror' | 'christmas';

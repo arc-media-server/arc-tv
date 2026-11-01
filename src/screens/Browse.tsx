@@ -10,14 +10,15 @@ import { useActive } from '../lib/nav';
 import { prefs as loadPrefs } from '../lib/store';
 import { HomeContent } from './Home';
 import { LibraryContent, WatchlistContent } from './Library';
+import { PlaylistsContent } from './Playlists';
 import { SearchContent } from './Search';
 import { SettingsContent } from './Settings';
 
 // The main screen, as the Android app's BrowseScreen: a rail down the left (Search, Home, the
-// libraries with the Watchlist where the profile put it, and the profile at the bottom) that opens
+// libraries with the Watchlist where the profile put it, Playlists after them, and the profile at the bottom) that opens
 // into labels when it has the focus, and the chosen section beside it.
 
-export type Section = { kind: 'home' } | { kind: 'search' } | { kind: 'watchlist' } | { kind: 'settings' } | { kind: 'library'; id: number };
+export type Section = { kind: 'home' } | { kind: 'search' } | { kind: 'watchlist' } | { kind: 'playlists' } | { kind: 'settings' } | { kind: 'library'; id: number };
 
 const same = (a: Section, b: Section) => a.kind === b.kind && (a.kind !== 'library' || a.id === (b as { id: number }).id);
 
@@ -146,6 +147,7 @@ export function Browse({ profile, canSwitchProfile, serverName, onSwitchProfile,
         {section.kind === 'home' && <HomeContent prefs={prefs} libraries={frame.libraries} visits={visits} onReady={ready} />}
         {section.kind === 'search' && <SearchContent onReady={ready} />}
         {section.kind === 'watchlist' && <WatchlistContent visits={visits} onReady={ready} />}
+        {section.kind === 'playlists' && <PlaylistsContent visits={visits} onReady={ready} />}
         {section.kind === 'settings' && <SettingsContent serverName={serverName} onSwitchServer={onSwitchServer} onSignOut={onSignOut} onReady={ready} />}
         {lib && <LibraryContent key={lib.id} library={lib} visits={visits} onReady={ready} />}
       </Container>
@@ -163,6 +165,7 @@ export function Browse({ profile, canSwitchProfile, serverName, onSwitchProfile,
         <SidebarItem icon={<Icon name="search" />} label={t('nav.search')} selected={section.kind === 'search'} onClick={() => show({ kind: 'search' })} />
         <SidebarItem icon={<Icon name="home" />} label={t('nav.home')} selected={section.kind === 'home'} onClick={() => show({ kind: 'home' })} />
         {items}
+        <SidebarItem icon={<Icon name="playlist" />} label={t('nav.playlists')} selected={section.kind === 'playlists'} onClick={() => show({ kind: 'playlists' })} />
         <div className="side-spacer" />
         <SidebarItem icon={<Icon name="gear" />} label={t('nav.settings')} selected={section.kind === 'settings'} onClick={() => show({ kind: 'settings' })} />
       </EntryContainer>

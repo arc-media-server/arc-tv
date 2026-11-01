@@ -187,7 +187,9 @@ export interface Season { season_number: number; name: string; poster?: string; 
 export interface SeasonsResponse { series: Item; seasons: Season[]; unplaced?: Item[] }
 
 export interface CollectionPage { collection: CollectionRef; items: Item[] }
-export interface PlaylistPage { playlist: { id: string; title: string }; entries: { entry_id: number; item: Item }[] }
+/** A playlist in the list: its picture is a mosaic of up to four of its titles' posters. */
+export interface PlaylistRef { id: string; title: string; count?: number; duration_ms?: number; images?: string[]; smart_filter?: Record<string, unknown> }
+export interface PlaylistPage { playlist: PlaylistRef; entries: { entry_id: number; item: Item }[] }
 
 export interface Palette { available: boolean; colors?: { top_left: string; top_right: string; bottom_left: string; bottom_right: string } }
 
