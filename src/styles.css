@@ -1,0 +1,481 @@
+/* Laid out for a 1920x1080 screen viewed from the sofa, in Arc's dark look and teal brand (the
+   Android app's ui/theme/Theme.kt: accent #2bb3a3, accent-strong #0b7d72, logo #7fdccd -> #0b7d72).
+   Sizes are the Android app's dp doubled. Kept to CSS that Chrome 53 understands: no grid, no gap,
+   no aspect-ratio, no :focus-within, no inset. */
+
+:root {
+  --bg: #0b0b10;
+  --surface: #15151c;
+  --surface2: #1f1f28;
+  --surface3: #2a2a35;
+  --text: #f5f5f7;
+  --muted: #a1a1ad;
+  --subtle: #6b6b78;
+  --accent: #2bb3a3;
+  --accent-strong: #0b7d72;
+  --accent-light: #7fdccd;
+  --warning: #ffb547;
+  --error: #ff6b6b;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root {
+  margin: 0;
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'LG Smart UI', 'SamsungOne', 'Segoe UI', Roboto, Arial, sans-serif;
+  font-size: 30px;
+}
+
+h1 { font-size: 64px; margin: 0 0 24px; font-weight: 700; }
+h2 { font-size: 40px; margin: 0 0 16px; font-weight: 600; }
+p { margin: 0 0 16px; }
+.muted { color: var(--muted); }
+.error { color: var(--error); }
+.warning { color: var(--warning); font-size: 26px; margin-top: 8px; }
+.lead { font-size: 36px; max-width: 1200px; text-align: center; }
+
+.screen, .screen-slot { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; overflow: hidden; }
+.centered { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 80px; }
+.stack { display: flex; flex-direction: column; align-items: stretch; min-width: 900px; }
+.stack > * { margin-bottom: 16px; }
+.inline { display: flex; flex-direction: row; align-items: center; flex-wrap: wrap; }
+.inline > * { margin-right: 20px; margin-bottom: 16px; }
+
+/* Focus: Spotlight puts .spottable on focusable things and real DOM focus on the focused one. */
+.spottable { outline: none; transition: transform 0.15s ease-out, box-shadow 0.15s ease-out, background-color 0.15s, color 0.15s; }
+/* Things only grow on focus where their group leaves room for it (cards in rows): Spotlight treats
+   a focused element that pokes out of its group as outside it, and then can't leave it downwards. */
+.spottable:focus { box-shadow: 0 0 0 6px var(--text); z-index: 1; }
+.profile.spottable:focus { transform: scale(1.06); }
+
+.btn {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  height: 88px;
+  padding: 0 44px;
+  border-radius: 44px;
+  background: rgba(42, 42, 53, 0.75);
+  color: var(--text);
+  font-size: 30px;
+  font-weight: 600;
+  border: 0;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn .icon { margin-right: 14px; }
+.btn.primary { background: var(--text); color: var(--bg); }
+.btn:focus { background: var(--text); color: var(--bg); box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45); }
+.btn.selected { background: var(--accent-strong); }
+.btn.small { height: 72px; padding: 0 32px; font-size: 26px; margin-left: 20px; }
+.server { flex-direction: column; align-items: flex-start; height: auto; padding: 24px 40px; border-radius: 24px; }
+.server .muted { font-size: 26px; }
+.btn:focus .muted { color: #444; }
+
+.text-input {
+  width: 760px;
+  padding: 18px 24px;
+  font-size: 32px;
+  border-radius: 14px;
+  border: 3px solid var(--surface3);
+  background: var(--surface);
+  color: var(--text);
+}
+.text-input:focus { border-color: var(--accent); box-shadow: none; transform: none; }
+
+.link-code { font-size: 140px; letter-spacing: 24px; font-weight: 700; margin: 24px 0; font-family: monospace; color: var(--accent-light); }
+
+.spinner {
+  width: 64px; height: 64px; border-radius: 50%;
+  border: 6px solid rgba(255, 255, 255, 0.15); border-top-color: var(--accent);
+  animation: spin 0.9s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.fade-in { animation: fade 0.6s ease-out both; }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+
+.toast {
+  position: absolute; left: 50%; bottom: 80px; transform: translateX(-50%);
+  background: var(--surface3); color: var(--text); padding: 24px 40px; border-radius: 24px; font-size: 30px; z-index: 50;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+/* Profiles and PIN */
+.profiles { display: flex; flex-direction: row; margin-bottom: 40px; }
+.profile { display: flex; flex-direction: column; align-items: center; margin: 0 28px; padding: 16px; border-radius: 24px; font-size: 32px; }
+.avatar { width: 200px; height: 200px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 96px; font-weight: 700; margin-bottom: 16px; background: #555; color: #fff; flex: 0 0 auto; }
+.color-violet { background: linear-gradient(135deg, #a78bfa, #4f46e5); }
+.color-blue { background: linear-gradient(135deg, #38bdf8, #2563eb); }
+.color-teal { background: linear-gradient(135deg, #5eead4, #0891b2); }
+.color-green { background: linear-gradient(135deg, #34d399, #15803d); }
+.color-amber { background: linear-gradient(135deg, #fcd34d, #ca8a04); }
+.color-orange { background: linear-gradient(135deg, #fb923c, #dc2626); }
+.color-rose { background: linear-gradient(135deg, #f472b6, #e11d48); }
+.color-slate { background: linear-gradient(135deg, #94a3b8, #334155); }
+.pin-dots { display: flex; margin: 24px 0 40px; }
+.pin-dots span { width: 36px; height: 36px; border-radius: 50%; border: 4px solid var(--text); margin: 0 14px; }
+.pin-dots span.on { background: var(--text); }
+.pin-pad { display: flex; flex-wrap: wrap; width: 480px; margin-bottom: 32px; }
+.pin-pad > * { width: 140px; height: 100px; margin: 10px; }
+.pin-key { align-items: center; font-size: 44px; border-radius: 24px; }
+
+/* Scrolling that follows the focus (components/Scroller.tsx) */
+.scroller { overflow: hidden; position: relative; }
+.scroller-inner { transition: transform 0.25s ease-out; will-change: transform; }
+.scroller-x { white-space: nowrap; }
+.scroller-x > .scroller-inner { display: inline-block; vertical-align: top; }
+
+/* Artwork */
+.artwork { position: relative; overflow: hidden; background: linear-gradient(135deg, var(--surface3), var(--surface)); }
+.artwork img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.artwork-label {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center;
+  padding: 24px; text-align: center; color: var(--muted); font-size: 26px; font-weight: 600; white-space: normal; overflow: hidden;
+}
+.ratio-2x3 { padding-top: 150%; }
+.ratio-16x9 { padding-top: 56.25%; }
+
+/* Cards */
+.card { display: inline-block; vertical-align: top; width: 232px; margin-right: 40px; white-space: normal; }
+.card-thumb { width: 344px; }
+.card-backdrop { width: 400px; }
+.card-face { position: relative; border-radius: 20px; overflow: hidden; background: var(--surface); }
+.card-face.spottable:focus { transform: scale(1.08); box-shadow: 0 0 0 6px var(--text), 0 24px 48px rgba(0, 0, 0, 0.55); }
+.card-caption { margin-top: 16px; min-height: 76px; }
+.card-title { font-size: 26px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: rgba(245, 245, 247, 0.85); }
+.card-sub { font-size: 24px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+.card-sub.two-lines { white-space: normal; max-height: 64px; }
+.badge { position: absolute; top: 12px; right: 12px; background: var(--accent-strong); color: #fff; font-size: 24px; font-weight: 700; }
+.badge.count { border-radius: 12px; padding: 2px 14px; }
+.badge.tick { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 26px; }
+.progress { position: absolute; left: 0; right: 0; bottom: 0; height: 8px; background: rgba(0, 0, 0, 0.55); }
+.progress div { height: 100%; background: var(--accent); }
+.backdrop-art { position: relative; padding-top: 75%; }
+.backdrop-art .artwork { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
+.backdrop-shade { position: absolute; left: 0; right: 0; bottom: 0; height: 50%; background: linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.7)); }
+.backdrop-logo { position: absolute; left: 14%; width: 72%; bottom: 28px; height: 26%; object-fit: contain; }
+.backdrop-title { position: absolute; left: 24px; right: 24px; bottom: 28px; text-align: center; font-size: 30px; font-weight: 700; white-space: normal; }
+.play-glyph { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 64px; color: rgba(255, 255, 255, 0.85); }
+
+.person-card { display: inline-block; vertical-align: top; width: 224px; margin-right: 40px; text-align: center; white-space: normal; }
+.person-face { width: 208px; height: 208px; border-radius: 50%; overflow: hidden; margin: 0 auto 20px; }
+.person-face .artwork { width: 208px; height: 208px; }
+.person-face .artwork-label { font-size: 56px; }
+.person-face.spottable:focus { transform: scale(1.08); box-shadow: 0 0 0 6px var(--text); }
+
+/* Rows of cards */
+.shelf { padding-bottom: 12px; }
+.shelf-title { font-size: 36px; font-weight: 600; margin: 0 0 4px; }
+.strip { width: 1920px; }
+.strip-items { display: flex; flex-direction: row; padding-top: 24px; padding-bottom: 24px; }
+
+/* Panels over a page */
+.overlay { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; background: rgba(0, 0, 0, 0.6); display: flex; align-items: center; justify-content: center; z-index: 20; }
+.overlay-panel { background: var(--surface); border-radius: 32px; padding: 44px 48px; max-height: 1000px; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6); }
+.overlay-title { font-size: 40px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 24px; }
+.panel-list { max-height: 780px; }
+.panel-list .scroller-inner { padding: 4px 6px; }
+.side-panel {
+  position: absolute; top: 0; right: 0; bottom: 0; width: 720px; z-index: 20;
+  background: rgba(21, 21, 28, 0.97); padding: 56px 40px; animation: slide-in 0.2s ease-out both;
+}
+.side-panel h2 { margin-bottom: 20px; }
+.side-panel .panel-list { max-height: 860px; }
+@keyframes slide-in { from { transform: translateX(80px); opacity: 0; } to { transform: none; opacity: 1; } }
+.menu-item { display: flex; flex-direction: row; align-items: center; min-height: 84px; padding: 12px 24px; border-radius: 18px; margin-bottom: 4px; }
+.menu-item.spottable:focus { background: var(--text); color: var(--bg); transform: none; box-shadow: none; }
+.menu-icon { width: 48px; flex: 0 0 48px; font-size: 30px; text-align: center; margin-right: 20px; }
+.menu-text { display: flex; flex-direction: column; min-width: 0; }
+.menu-label { font-size: 32px; }
+.menu-detail { font-size: 24px; color: var(--muted); }
+.menu-item:focus .menu-detail { color: #555; }
+.menu-heading { font-size: 28px; color: var(--muted); padding: 12px 24px 8px; }
+
+/* Media Info */
+.media-info-head { display: flex; flex-direction: row; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+.media-info-body { max-height: 780px; }
+.file-info { margin-bottom: 36px; }
+.file-info h3 { font-size: 32px; margin: 0 0 12px; }
+.info-row { display: flex; flex-direction: row; padding: 10px 0; font-size: 28px; }
+.info-label { width: 240px; flex: 0 0 240px; font-size: 24px; color: var(--subtle); text-transform: uppercase; letter-spacing: 1px; padding-top: 4px; }
+.info-lines { flex: 1 1 auto; min-width: 0; }
+.file-path { font-family: monospace; font-size: 22px; color: var(--subtle); margin-top: 8px; word-break: break-all; }
+.stat-row { display: flex; flex-direction: row; padding: 10px 0; font-size: 26px; }
+.stat-row .info-label { width: 200px; flex-basis: 200px; }
+
+/* The immersive backdrop: art top right over a wash of its colours */
+.immersive { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; background: var(--bg); overflow: hidden; }
+.wash { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; }
+.backdrop-frame {
+  position: absolute; top: 0; right: 0; width: 1344px; height: 756px;
+  -webkit-mask-image: linear-gradient(to right, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.75) 45%, #000 70%), linear-gradient(to bottom, #000 50%, rgba(0, 0, 0, 0.3) 85%, rgba(0, 0, 0, 0));
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+}
+.backdrop-img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
+.summary { width: 960px; }
+.title-logo { display: block; max-width: 720px; height: 144px; object-fit: contain; object-position: left bottom; }
+.title-name { font-size: 64px; line-height: 1.1; margin: 0; max-height: 144px; overflow: hidden; }
+.summary-meta { margin-top: 28px; font-size: 28px; color: rgba(245, 245, 247, 0.75); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.labels { margin-top: 16px; display: flex; flex-direction: row; flex-wrap: wrap; }
+.label { border: 2px solid rgba(245, 245, 247, 0.35); border-radius: 10px; padding: 2px 14px; font-size: 22px; font-weight: 600; margin-right: 12px; color: rgba(245, 245, 247, 0.85); }
+.summary-overview {
+  margin-top: 16px; font-size: 28px; line-height: 1.4; color: rgba(245, 245, 247, 0.8);
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; max-height: 118px;
+}
+
+/* Browse: the rail and the section beside it */
+.browse-content { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; }
+/* Closed: a slim column of icons. Open: a floating, rounded panel over the page (as the Apple TV
+   app), with smaller items. No backdrop blur: Chrome 53 has none, so the panel is near-opaque. */
+.sidebar {
+  position: absolute; top: 24px; left: 24px; bottom: 24px; width: 96px; padding: 20px 12px; z-index: 10;
+  display: flex; flex-direction: column; overflow: hidden; border-radius: 36px;
+  transition: width 0.32s cubic-bezier(0.2, 0.9, 0.3, 1), background-color 0.25s, box-shadow 0.25s, border-color 0.25s;
+  border: 2px solid rgba(255, 255, 255, 0);
+}
+.sidebar.open {
+  width: 400px; background: rgba(36, 36, 44, 0.97); border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.55);
+}
+.side-gap { height: 28px; flex: 0 0 auto; }
+.side-item {
+  display: flex; flex-direction: row; align-items: center; height: 64px; flex: 0 0 auto; padding: 0 16px; border-radius: 32px; color: var(--muted); margin-bottom: 4px; white-space: nowrap;
+  transition: padding 0.32s cubic-bezier(0.2, 0.9, 0.3, 1), background-color 0.15s, color 0.15s;
+}
+/* As the Apple TV app: opening, the icons ride out with the panel's edge and the names slide in beside them. */
+.sidebar.open .side-item { padding-left: 30px; }
+.side-item.selected { color: var(--text); background: rgba(255, 255, 255, 0.12); }
+.side-item.spottable:focus { background: var(--text); color: var(--bg); transform: none; box-shadow: none; }
+.side-icon { width: 40px; height: 40px; flex: 0 0 40px; display: flex; align-items: center; justify-content: center; }
+.side-icon .icon { width: 32px; height: 32px; }
+.side-label {
+  flex: 1 1 auto; margin-left: 22px; font-size: 26px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; opacity: 0;
+  transform: translateX(-40px); transition: opacity 0.12s, transform 0.32s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+.side-extra { margin-left: 12px; font-size: 22px; font-weight: 500; opacity: 0; transform: translateX(-40px); transition: opacity 0.12s, transform 0.32s cubic-bezier(0.2, 0.9, 0.3, 1); }
+.sidebar.open .side-label, .sidebar.open .side-extra { opacity: 1; transform: translateX(0); transition: opacity 0.22s 0.06s, transform 0.32s cubic-bezier(0.2, 0.9, 0.3, 1); }
+.sidebar.open .side-extra { opacity: 0.6; }
+.icon { display: block; }
+
+/* Home */
+.home { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; }
+.home-page { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; }
+/* The hero fills the screen but for the first row's titles peeking in below it. */
+.home-hero { position: relative; height: 900px; padding: 0 192px; display: flex; flex-direction: column; justify-content: flex-end; }
+.home-hero-text { max-width: 1040px; }
+.home-hero-meta { margin-top: 20px; }
+.home-hero-overview { margin-top: 14px; }
+.home-hero-actions .actions { margin-top: 32px; }
+.home-hero-dots { position: absolute; left: 0; right: 0; bottom: 30px; display: flex; flex-direction: row; justify-content: center; }
+.hero-dot { width: 12px; height: 12px; border-radius: 6px; margin: 0 6px; background: rgba(255, 255, 255, 0.35); transition: width 0.3s, background-color 0.3s; }
+.hero-dot.on { width: 32px; background: #fff; }
+.home-row { padding-top: 12px; }
+.row-title { font-size: 34px; font-weight: 600; margin: 0 0 4px; }
+.row-loading { height: 200px; display: flex; align-items: center; }
+.row-failed { display: flex; flex-direction: row; align-items: center; height: 200px; }
+.row-failed .muted { margin-right: 32px; }
+.home .strip-items { padding-top: 28px; padding-bottom: 32px; }
+.home .card { margin-right: 36px; }
+.home-empty { position: absolute; top: 0; left: 120px; right: 0; bottom: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+
+/* A library, the Watchlist, a collection or person */
+.library, .page { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; }
+.page { background: var(--bg); }
+.page-head { display: flex; flex-direction: row; align-items: center; height: 120px; margin-top: 44px; padding-right: 96px; }
+.page-title { font-size: 48px; margin: 0 40px 0 0; white-space: nowrap; }
+.head-spacer { flex: 1 1 auto; }
+.head-count { font-size: 28px; margin-left: 24px; }
+.head-buttons { display: flex; flex-direction: row; align-items: center; }
+.tabs { display: flex; flex-direction: row; align-items: center; padding: 6px; border-radius: 40px; background: rgba(255, 255, 255, 0.08); }
+/* The Apple TV app's segmented control: a glass pill holding the tabs, the current one lighter. */
+.tab { padding: 12px 30px; border-radius: 34px; font-size: 26px; font-weight: 600; color: rgba(245, 245, 247, 0.65); white-space: nowrap; }
+.tab + .tab { margin-left: 4px; }
+.tab.selected { background: rgba(255, 255, 255, 0.18); color: var(--text); }
+.head-buttons .btn { background: rgba(255, 255, 255, 0.1); }
+.head-buttons .btn:focus { background: var(--text); }
+.tab.spottable:focus { background: var(--text); color: var(--bg); transform: none; box-shadow: none; }
+.page-note { padding-left: 192px; padding-top: 32px; }
+.library-body, .library-titles { position: absolute; top: 150px; left: 0; right: 0; bottom: 0; }
+.person-titles { top: 190px; }
+.library-body .scroller-inner { padding-top: 12px; padding-bottom: 60px; }
+.grid-scroller { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
+.grid-holder { position: relative; }
+.grid-cells { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
+.grid-row { position: absolute; display: flex; flex-direction: row; padding-top: 20px; }
+.grid-cell .card { margin-right: 0; }
+.letter-bar { position: absolute; right: 28px; top: 8px; bottom: 8px; width: 56px; display: flex; flex-direction: column; align-items: center; }
+.letter { width: 48px; height: 32px; line-height: 32px; text-align: center; font-size: 22px; font-weight: 600; color: var(--muted); border-radius: 10px; }
+.letter.spottable:focus { background: var(--text); color: var(--bg); box-shadow: none; }
+.person-head .person-photo { width: 120px; height: 120px; border-radius: 50%; margin-right: 32px; flex: 0 0 auto; }
+.person-head .page-title { margin-bottom: 4px; }
+
+/* Search */
+.search { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; }
+.search-head { padding-top: 64px; padding-bottom: 24px; display: flex; flex-direction: row; align-items: center; }
+/* As the Apple TV app's: a glass pill with a magnifier, white when focused. */
+.search-field { position: relative; }
+.search-field .icon { position: absolute; left: 34px; top: 30px; color: rgba(245, 245, 247, 0.6); pointer-events: none; }
+.search-input:focus ~ .icon { color: #444; }
+.search-empty { position: absolute; top: 300px; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; color: var(--muted); }
+.search-empty .icon { width: 96px; height: 96px; margin-bottom: 24px; opacity: 0.5; }
+.search-empty p { font-size: 30px; margin: 0; }
+.search-input { width: 1200px; height: 96px; padding: 0 40px 0 96px; font-size: 34px; border-radius: 48px; border: 0; background: rgba(255, 255, 255, 0.1); color: var(--text); outline: none; }
+.search-input:focus { background: var(--text); color: var(--bg); box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45); transform: none; }
+.search-body { position: absolute; top: 184px; left: 0; right: 0; bottom: 0; }
+.search-body .scroller-inner { padding-bottom: 60px; }
+
+/* A title's page */
+.details-page { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; }
+.details-page > .scroller-inner { padding-top: 72px; padding-bottom: 80px; }
+.actions { display: flex; flex-direction: row; align-items: center; margin-top: 48px; }
+.actions > * { margin-right: 28px; }
+.round-btn { width: 96px; height: 96px; border-radius: 50%; background: rgba(42, 42, 53, 0.7); display: flex; align-items: center; justify-content: center; color: var(--text); }
+.round-btn.on { color: var(--accent); }
+.round-btn.spottable:focus { background: var(--text); color: var(--bg); box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45); }
+.action-label { height: 56px; padding-top: 16px; font-size: 26px; font-weight: 600; color: rgba(245, 245, 247, 0.8); }
+.seasons { padding-top: 8px; }
+.seasons .tabs { margin-bottom: 4px; }
+.episode-card { width: 344px; }
+.episode-overview { height: 72px; font-size: 22px; color: var(--muted); overflow: hidden; margin-top: 4px; }
+.details .shelf { padding-top: 24px; }
+
+/* Player */
+.player { background: #000; }
+.player-host, .native-video { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; }
+.native-video { object-fit: contain; }
+.subtitles { position: absolute; left: 120px; right: 120px; text-align: center; z-index: 6; pointer-events: none; }
+.cue { display: inline-block; padding: 4px 16px; border-radius: 8px; line-height: 1.3; white-space: pre-line; }
+.player-spinner { position: absolute; top: 50%; left: 50%; margin: -32px 0 0 -32px; z-index: 3; }
+.player-pane { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; background: rgba(0, 0, 0, 0.85); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10; }
+.skip-button { position: absolute; right: 96px; bottom: 120px; padding: 22px 44px; border-radius: 44px; background: var(--text); color: var(--bg); font-size: 30px; font-weight: 700; z-index: 4; }
+.controls { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; z-index: 5; animation: fade 0.2s ease-out both; }
+.timeline.spottable:focus { transform: none; box-shadow: none; }
+.tl-track { right: 0; background: rgba(255, 255, 255, 0.2); }
+.tl-buffered { background: rgba(255, 255, 255, 0.3); }
+.tl-played { background: var(--accent); }
+.timeline:focus .tl-knob { opacity: 1; }
+.trick-thumb { position: absolute; bottom: 72px; border-radius: 16px; border: 2px solid rgba(255, 255, 255, 0.25); background-color: #000; background-repeat: no-repeat; }
+.up-next {
+  position: absolute; right: 96px; bottom: 300px; width: 720px; z-index: 8; display: flex; flex-direction: row; align-items: center;
+  background: rgba(20, 20, 22, 0.9); border-radius: 24px; padding: 20px; box-shadow: 0 24px 48px rgba(0, 0, 0, 0.55);
+}
+.up-next-art { width: 240px; height: 135px; padding-top: 0; flex: 0 0 240px; border-radius: 12px; margin-right: 24px; }
+.up-next-text { min-width: 0; font-size: 22px; }
+.small-caps { font-size: 20px; }
+.up-next-title { font-size: 28px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 4px 0; }
+.up-next .inline { margin-top: 14px; }
+.up-next .inline > * { margin-right: 14px; margin-bottom: 0; }
+.up-next .btn { height: 56px; padding: 0 26px; font-size: 22px; }
+.up-next .btn .icon { width: 22px; height: 22px; margin-right: 10px; }
+.extra-bar { position: absolute; left: 0; right: 0; bottom: 0; padding: 120px 96px 56px; background: linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.85)); }
+.tl-static { height: 8px; background: rgba(255, 255, 255, 0.2); border-radius: 4px; margin: 20px 0 14px; }
+.tl-static div { height: 100%; background: var(--accent); border-radius: 4px; }
+
+/* A title's menu, as the Apple TV app's context menus: a floating list beside its opener. */
+.popover-shade { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; background: rgba(0, 0, 0, 0.45); z-index: 20; }
+.popover-place { position: absolute; }
+.popover {
+  padding: 14px; border-radius: 36px; background: rgba(44, 44, 52, 0.96);
+  border: 2px solid rgba(255, 255, 255, 0.08); box-shadow: 0 30px 90px rgba(0, 0, 0, 0.6);
+}
+.popover-title { font-size: 24px; font-weight: 600; color: var(--muted); padding: 10px 22px 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.popover-item { display: flex; flex-direction: row; align-items: center; height: 72px; padding: 0 26px; border-radius: 22px; color: rgba(245, 245, 247, 0.85); }
+.popover-item.spottable:focus { background: var(--text); color: var(--bg); transform: none; box-shadow: none; }
+.popover-label { flex: 1 1 auto; font-size: 28px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: 20px; }
+
+/* A title's page, as the Apple TV app: full-screen artwork with the logo low on it, the buttons
+   and description on one line beneath, and the rest scrolling up over a dimmed copy. */
+.hero-backdrop { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; background: var(--bg); overflow: hidden; }
+.hero-img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
+.hero-shade {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  background: linear-gradient(to top, rgba(11, 11, 16, 0.95) 0, rgba(11, 11, 16, 0.75) 22%, rgba(11, 11, 16, 0) 55%),
+    linear-gradient(to right, rgba(11, 11, 16, 0.7) 0, rgba(11, 11, 16, 0.25) 40%, rgba(11, 11, 16, 0) 60%);
+}
+.hero-dim { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(11, 11, 16, 0.82); opacity: 0; transition: opacity 0.3s; }
+.hero-dim.on { opacity: 1; }
+.details-hero { height: 930px; padding: 0 96px; display: flex; flex-direction: column; justify-content: flex-end; }
+.details-hero .title-logo { max-width: 760px; height: 200px; }
+.details-hero .title-name { font-size: 80px; max-height: 200px; }
+.hero-episode { margin-top: 16px; font-size: 32px; font-weight: 600; }
+.hero-row { display: flex; flex-direction: row; align-items: flex-start; margin-top: 36px; }
+.hero-actions { flex: 0 0 auto; }
+.hero-actions .actions { margin-top: 0; }
+.hero-about { flex: 1 1 auto; margin-left: 40px; min-width: 0; padding-top: 4px; }
+.hero-overview {
+  margin: 0; font-size: 26px; line-height: 1.4; color: rgba(245, 245, 247, 0.85);
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; max-height: 110px;
+}
+.hero-meta { margin-top: 14px; display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; font-size: 22px; color: rgba(245, 245, 247, 0.7); }
+.hero-meta > span:first-child { margin-right: 16px; }
+.hero-meta .label { font-size: 18px; padding: 0 10px; margin-right: 10px; }
+.details .round-btn { width: 84px; height: 84px; background: rgba(255, 255, 255, 0.14); }
+.details .actions > * { margin-right: 20px; }
+.info-section { padding: 24px 96px 40px; }
+.info-section .shelf-title { padding-left: 0; }
+.info-grid { display: flex; flex-direction: row; flex-wrap: wrap; border-radius: 0; }
+.info-grid.spottable:focus { box-shadow: none; transform: none; }
+.info-cell { width: 33%; padding: 0 32px 28px 0; }
+.info-key { font-size: 22px; font-weight: 600; color: rgba(245, 245, 247, 0.6); margin-bottom: 6px; }
+.info-value { font-size: 24px; color: rgba(245, 245, 247, 0.9); line-height: 1.35; }
+.side-spacer { flex: 1 1 auto; }
+.popover-noicon { display: inline-block; width: 30px; }
+.popover-list { max-height: 790px; }
+
+/* Settings, as a tvOS settings list: a row per choice, the value on the right. */
+.settings { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; }
+.settings-page { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; }
+.settings-title { padding-top: 72px; margin-bottom: 24px; }
+.settings-list { width: 1100px; padding-bottom: 80px; }
+.settings-heading { font-size: 26px; font-weight: 600; color: var(--muted); margin: 36px 0 12px 24px; }
+.settings-row { display: flex; flex-direction: row; align-items: center; height: 76px; padding: 0 28px; border-radius: 20px; background: rgba(255, 255, 255, 0.06); margin-bottom: 8px; }
+.settings-row.spottable:focus { background: var(--text); color: var(--bg); transform: none; box-shadow: none; }
+.settings-label { flex: 1 1 auto; font-size: 28px; font-weight: 500; }
+.settings-value { font-size: 26px; color: var(--muted); margin-left: 24px; white-space: nowrap; }
+.settings-row:focus .settings-value { color: #555; }
+.settings-note { font-size: 22px; color: var(--muted); margin: 8px 24px 0; max-width: 1000px; }
+.centered-fill { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; display: flex; align-items: center; justify-content: center; }
+.popover-layer { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; z-index: 20; }
+.popover-body { font-size: 22px; line-height: 1.4; color: var(--muted); padding: 0 22px 12px; }
+.popover-text { flex: 1 1 auto; display: flex; flex-direction: column; min-width: 0; margin-right: 20px; }
+.popover-text .popover-label { margin-right: 0; }
+.popover-item.with-detail { height: 88px; }
+.popover-detail { font-size: 20px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.popover-item:focus .popover-detail { color: #555; }
+.popover-stat { display: flex; flex-direction: row; padding: 8px 22px; font-size: 22px; }
+.popover-stat .info-label { width: 150px; flex: 0 0 150px; color: var(--muted); }
+
+/* The player's controls, as the Apple TV app's: all along the bottom over a shadow. */
+.controls-bottom { position: absolute; left: 0; right: 0; bottom: 0; padding: 220px 96px 48px; background: linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.55) 45%, rgba(0, 0, 0, 0.85)); }
+.skip-inline { position: absolute; right: 96px; top: 96px; }
+.ctl-head { display: flex; flex-direction: row; align-items: flex-end; justify-content: space-between; margin-bottom: 22px; }
+.ctl-heading { min-width: 0; flex: 1 1 auto; margin-right: 40px; }
+.ctl-sub { font-size: 24px; font-weight: 600; color: rgba(255, 255, 255, 0.7); margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ctl-title { font-size: 40px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ctl-side { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; }
+.ctl-label { height: 34px; font-size: 22px; font-weight: 600; margin-bottom: 8px; color: rgba(255, 255, 255, 0.85); }
+.ctl-row { display: flex; flex-direction: row; align-items: center; }
+.ctl-gap { width: 28px; }
+.ctl { width: 68px; height: 68px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; margin-left: 12px; background: rgba(255, 255, 255, 0.14); }
+.ctl .icon { width: 32px; height: 32px; }
+.ctl.spottable:focus { background: #fff; color: #000; box-shadow: none; transform: none; }
+.timeline { position: relative; height: 32px; border-radius: 8px; }
+.timeline.spottable:focus { transform: none; box-shadow: none; }
+.tl-track, .tl-buffered, .tl-played { position: absolute; left: 0; top: 12px; height: 8px; border-radius: 4px; }
+.tl-track { right: 0; background: rgba(255, 255, 255, 0.25); }
+.tl-buffered { background: rgba(255, 255, 255, 0.4); }
+.tl-played { background: #fff; }
+.timeline:focus .tl-track, .timeline:focus .tl-buffered, .timeline:focus .tl-played { top: 8px; height: 16px; border-radius: 8px; }
+.tl-chapter { position: absolute; top: 8px; width: 4px; height: 16px; background: rgba(0, 0, 0, 0.5); }
+.tl-knob { position: absolute; top: 2px; width: 28px; height: 28px; margin-left: -14px; border-radius: 50%; background: #fff; opacity: 0; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5); }
+.timeline:focus .tl-knob { opacity: 1; }
+.tl-time { position: absolute; top: -52px; transform: translateX(-50%); font-size: 26px; font-weight: 600; }
+.ctl-times { display: flex; flex-direction: row; justify-content: space-between; margin-top: 10px; font-size: 24px; font-weight: 600; color: rgba(255, 255, 255, 0.8); }
+.popover-subtitle { padding-top: 18px; }

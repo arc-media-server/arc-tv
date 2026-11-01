@@ -1,0 +1,14 @@
+{
+  "id": "org.arcmediaserver.tv",
+  "version": "0.1.0",
+  "vendor": "The Arc Media Server Authors",
+  "type": "web",
+  "main": "index.html",
+  "title": "Arc",
+  "icon": "icon.png",
+  "largeIcon": "largeIcon.png",
+  "splashBackground": "splash.png",
+  "bgColor": "#0b0d12",
+  "resolution": "1920x1080",
+  "disableBackHistoryAPI": true
+}
