@@ -180,7 +180,8 @@ export interface Prefs {
 }
 
 export interface Person { id: number; name: string; image?: string; count?: number; known_for?: string }
-export interface SearchResults { movies?: Item[]; shows?: Item[]; episodes?: Item[]; people?: Person[] }
+export interface GenreMatch { name: string; library_id: number; library_name?: string; count?: number }
+export interface SearchResults { movies?: Item[]; shows?: Item[]; episodes?: Item[]; people?: Person[]; collections?: CollectionRef[]; genres?: GenreMatch[] }
 export interface PersonPage { person: Person; credits: { item: Item; roles?: string[]; character?: string }[] }
 
 export interface Season { season_number: number; name: string; poster?: string; episodes: Item[] }

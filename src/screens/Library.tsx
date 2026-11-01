@@ -194,7 +194,7 @@ function RecommendedView({ rows, lib, onOpen }: { rows: RecommendedRow[]; lib: L
   );
 }
 
-const collectionCard = (c: CollectionRef): Card => ({
+export const collectionCard = (c: CollectionRef): Card => ({
   key: c.id, item: { id: c.id, kind: 'collection', title: c.title, images: c.images }, poster: c.images?.primary, thumb: c.images?.backdrop ?? c.images?.primary,
 });
 
@@ -202,7 +202,7 @@ function Tabs({ tabs, current, onSelect }: { tabs: { id: Tab; label: string }[];
   return (
     <Container className="tabs">
       {tabs.map((tab) => (
-        <Focusable key={tab.id} className={`tab${tab.id === current ? ' selected' : ''}`} onFocus={() => onSelect(tab.id)} onClick={() => onSelect(tab.id)}>
+        <Focusable key={tab.id} className={`tab${tab.id === current ? ' selected' : ''}`} data-default={tab.id === current || undefined} onFocus={() => onSelect(tab.id)} onClick={() => onSelect(tab.id)}>
           {tab.label}
         </Focusable>
       ))}
@@ -212,10 +212,11 @@ function Tabs({ tabs, current, onSelect }: { tabs: { id: Tab; label: string }[];
 
 type Load<T> = { value?: T; error?: string };
 
-export function LibraryContent({ library, visits, onReady }: { library: Library; visits: number; onReady: () => void }) {
+export function LibraryContent({ library, genre, visits, onReady }: { library: Library; genre?: string; visits: number; onReady: () => void }) {
   const nav = useNav();
-  const [tab, setTab] = useState<Tab>(library.kind === 'videos' ? 'titles' : 'recommended');
-  const [q, setQ] = useState<LibraryQuery>(queries.get(library.id) ?? defaultQuery);
+  // Opened on a genre (from Search): its titles, filtered to that genre, as the web's genre links.
+  const [tab, setTab] = useState<Tab>(library.kind === 'videos' || genre ? 'titles' : 'recommended');
+  const [q, setQ] = useState<LibraryQuery>(() => (genre ? { ...defaultQuery, genre } : queries.get(library.id) ?? defaultQuery));
   const [total, setTotal] = useState<number | null>(null);
   const [items, setItems] = useState<Record<number, Item>>({});
   const [letters, setLetters] = useState<{ letter: string; count: number }[]>([]);
