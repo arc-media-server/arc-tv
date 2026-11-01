@@ -90,12 +90,14 @@ export function MenuHeading({ children }: { children: ReactNode }) {
  * A title's menu as the Apple TV app draws its context menus: a floating rounded list beside what
  * opened it (the focused card or button), each choice's name on the left and its icon on the right.
  */
-export function Popover({ title, body, place = 'side', shade = true, onClose, children }: {
+export function Popover({ title, body, place = 'side', shade = true, from, onClose, children }: {
   title?: string;
   body?: string;
-  /** 'side': beside the opener, tops level (a card's menu). 'above': over it, right edges level (the player's menus). */
-  place?: 'side' | 'above';
+  /** 'side': beside the opener, tops level (a card's menu). 'above': over it, right edges level (the player's menus). 'below': under it, right edges level (a library's Sort and Filters). */
+  place?: 'side' | 'above' | 'below';
   shade?: boolean;
+  /** The opener's box, when it isn't the focused element (a list that changes page keeps its place). */
+  from?: ClientRect;
   onClose: () => void;
   children: ReactNode;
 }) {
@@ -103,13 +105,17 @@ export function Popover({ title, body, place = 'side', shade = true, onClose, ch
   useBack(() => { onClose(); });
   // Where the opener is, read once as the menu opens (the focus is still on it then).
   const [at] = useState(() => {
-    const el = Spotlight.getCurrent() as HTMLElement | null;
-    const r = el ? el.getBoundingClientRect() : null;
+    const el = from ? null : (Spotlight.getCurrent() as HTMLElement | null);
+    const r = from ?? (el ? el.getBoundingClientRect() : null);
     const scale = window.innerWidth / 1920 || 1;
     if (!r) return { left: 680, top: 300, above: 0 };
     if (place === 'above') {
       const left = Math.max(40, Math.min(1880 - POPOVER_WIDTH, r.right / scale - POPOVER_WIDTH));
       return { left, top: 40, above: r.top / scale - 24 };
+    }
+    if (place === 'below') {
+      const left = Math.max(40, Math.min(1880 - POPOVER_WIDTH, r.right / scale - POPOVER_WIDTH));
+      return { left, top: r.bottom / scale + 20, above: 0 };
     }
     const right = r.right / scale + 28;
     const left = right + POPOVER_WIDTH <= 1880 ? right : Math.max(40, r.left / scale - 28 - POPOVER_WIDTH);

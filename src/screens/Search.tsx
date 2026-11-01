@@ -3,12 +3,25 @@ import { api, enc, type SearchResults } from '../api';
 import { cardFor, MediaCard, PersonCard, Shelf } from '../components/Cards';
 import { Scroller } from '../components/Scroller';
 import { SpotInput } from '../components/spot';
+import { Icon } from '../components/Icon';
+import type { Item } from '../api';
 import { t } from '../i18n';
 import { useNav } from '../lib/nav';
 import { START } from './Home';
 
-// Search, as the Android app's: a field at the top (the TV's own keyboard comes up on OK), and
-// results as they're typed (once typing pauses): Movies, Shows, People, then Episodes.
+// Search, as the Apple TV app's (owner, 1 November): a glass field at the top (the TV's own
+// keyboard comes up on OK), and results as they're typed (once typing pauses): Top Results
+// (movies and shows together, as wide artwork cards), then People and Episodes.
+
+/** Movies and shows together, alternating, each list keeping Arc's best-first order. */
+function topResults(movies: Item[], shows: Item[]): Item[] {
+  const out: Item[] = [];
+  for (let i = 0; i < Math.max(movies.length, shows.length); i++) {
+    if (movies[i]) out.push(movies[i]);
+    if (shows[i]) out.push(shows[i]);
+  }
+  return out;
+}
 
 let lastQuery = '';
 
@@ -39,36 +52,41 @@ export function SearchContent({ onReady }: { onReady: () => void }) {
     return () => window.clearTimeout(timer);
   }, [text]);
 
-  const groups = results ? [
-    { title: t('search.movies'), items: results.movies ?? [], thumb: false },
-    { title: t('search.shows'), items: results.shows ?? [], thumb: false },
-  ] : [];
+  const top = results ? topResults(results.movies ?? [], results.shows ?? []) : [];
   const people = results?.people ?? [];
   const episodes = results?.episodes ?? [];
-  const nothing = results && !groups.some((g) => g.items.length) && !people.length && !episodes.length;
+  const nothing = results && !top.length && !people.length && !episodes.length;
 
   return (
     <div className="search">
       <div className="search-head" style={{ paddingLeft: START }}>
-        <SpotInput
-          className="search-input"
-          data-default
-          data-scrollable
-          value={text}
-          placeholder={t('search.placeholder')}
-          onChange={(e) => setText(e.target.value)}
-        />
+        <div className="search-field">
+          <SpotInput
+            className="search-input"
+            data-default
+            data-scrollable
+            value={text}
+            placeholder={t('search.placeholder')}
+            onChange={(e) => setText(e.target.value)}
+          />
+          <Icon name="search" size={36} />
+        </div>
       </div>
-      {!text.trim() && <p className="muted page-note">{t('search.hint')}</p>}
+      {!text.trim() && (
+        <div className="search-empty">
+          <Icon name="search" size={96} />
+          <p>{t('search.hint')}</p>
+        </div>
+      )}
       {error && <p className="error page-note">{error}</p>}
       {nothing && <p className="muted page-note">{t('search.empty', { q: text.trim() })}</p>}
       {results && !nothing && (
         <Scroller className="search-body" pad={20}>
-          {groups.map((g) => g.items.length > 0 && (
-            <Shelf key={g.title} title={g.title} start={START}>
-              {g.items.map((it) => <MediaCard key={it.id} card={cardFor(it)} onClick={() => nav.open(it)} />)}
+          {top.length > 0 && (
+            <Shelf title={t('search.top')} start={START}>
+              {top.map((it) => <MediaCard key={it.id} card={cardFor(it)} look="backdrop" width={400} onClick={() => nav.open(it)} />)}
             </Shelf>
-          ))}
+          )}
           {people.length > 0 && (
             <Shelf title={t('search.people')} start={START}>
               {people.map((p) => <PersonCard key={p.id} name={p.name} image={p.image} sub={p.known_for} onClick={() => nav.person(p.id)} />)}

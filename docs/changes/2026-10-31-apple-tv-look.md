@@ -39,3 +39,13 @@ itself every nine seconds while the hero is in view, and dots show which is show
 below and scroll up over a dimmed copy of the artwork, as on a title's page; Home's rows no longer
 change the backdrop as the focus moves. The hero's backdrop and round button are shared with the
 title page (`HeroBackdrop`, `RoundButton` in `components/Backdrop.tsx`).
+
+**Search and libraries (owner's pick, 1 November).** Search's field is a glass pill with a
+magnifier (white when focused), with a large magnifier and a line of help below it until something
+is typed. Movies and shows now come together as Top Results (alternating, each in Arc's best-first
+order) on wide artwork cards with the title's logo, then People and Episodes as before. A library's
+tabs sit in a glass segmented control (the current one lighter, the focused one white); Sort and
+Filters are glass buttons whose lists are the floating list, opening under the button and staying
+there as choices change the button's label (`Popover` takes the opener's box for this). Filters'
+pages (genre, decade, quality) change inside one list, so Back and closing return to the Filters
+button.
