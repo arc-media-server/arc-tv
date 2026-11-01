@@ -159,6 +159,8 @@
   "details.resumeEpisode": "Resume {{code}}",
   "details.goToShow": "Go to Show",
   "details.timeLeft": "{{time}} left",
+  "details.episodeN": "Episode {{n}}",
+  "details.more": "More",
   "details.cast": "Cast",
   "details.moreLikeThis": "More Like This",
   "details.extras": "Extras",
