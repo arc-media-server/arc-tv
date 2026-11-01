@@ -299,6 +299,8 @@ p { margin: 0 0 16px; }
 .tab + .tab { margin-left: 4px; }
 .tab.selected { background: rgba(255, 255, 255, 0.18); color: var(--text); }
 .head-buttons .btn { background: rgba(255, 255, 255, 0.1); }
+.collection-play { margin-left: 48px; }
+.collection-play .btn { margin-right: 20px; }
 .head-buttons .btn:focus { background: var(--text); }
 .tab.spottable:focus { background: var(--text); color: var(--bg); transform: none; box-shadow: none; }
 .page-note { padding-left: 192px; padding-top: 32px; }

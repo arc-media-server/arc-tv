@@ -184,6 +184,8 @@ export const queues = {
     const at = q.entries.findIndex((e) => e.id === q.current_entry_id);
     return edit(at >= 0 && q.entries[at + 1]?.id === entryId ? 'advance' : 'select', { entry_id: entryId });
   }),
+  /** Mixes up what's still to come (the current entry stays where it is). */
+  shuffle: () => locked(() => edit('shuffle')),
   /** Takes an entry out of the queue (not the one playing). */
   remove: (entryId: string) => locked(() => edit('remove', { entry_ids: [entryId] })),
   /** Moves an entry one place earlier (-1) or later (+1), staying after the one playing. */
