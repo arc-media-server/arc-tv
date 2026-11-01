@@ -1,5 +1,5 @@
-/* Laid out for a 1920x1080 screen viewed from the sofa, in Arc's dark look and teal brand (the
-   Android app's ui/theme/Theme.kt: accent #2bb3a3, accent-strong #0b7d72, logo #7fdccd -> #0b7d72).
+/* Laid out for a 1920x1080 screen viewed from the sofa, in Arc's dark look. No UI colour (owner,
+   1 November): highlights are white on black; Arc's teal (#7fdccd -> #0b7d72) is the logo's alone.
    Sizes are the Android app's dp doubled. Kept to CSS that Chrome 53 understands: no grid, no gap,
    no aspect-ratio, no :focus-within, no inset. */
 
@@ -11,9 +11,9 @@
   --text: #f5f5f7;
   --muted: #a1a1ad;
   --subtle: #6b6b78;
-  --accent: #2bb3a3;
-  --accent-strong: #0b7d72;
-  --accent-light: #7fdccd;
+  --accent: #f5f5f7;
+  --accent-strong: rgba(255, 255, 255, 0.28);
+  --accent-light: #f5f5f7;
   --warning: #ffb547;
   --error: #ff6b6b;
 }
@@ -161,7 +161,7 @@ p { margin: 0 0 16px; }
 .card-title { font-size: 26px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: rgba(245, 245, 247, 0.85); }
 .card-sub { font-size: 24px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
 .card-sub.two-lines { white-space: normal; max-height: 64px; }
-.badge { position: absolute; top: 12px; right: 12px; background: var(--accent-strong); color: #fff; font-size: 24px; font-weight: 700; }
+.badge { position: absolute; top: 12px; right: 12px; background: var(--text); color: var(--bg); font-size: 24px; font-weight: 700; }
 .badge.count { border-radius: 12px; padding: 2px 14px; }
 .badge.tick { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 26px; }
 .progress { position: absolute; left: 0; right: 0; bottom: 0; height: 8px; background: rgba(0, 0, 0, 0.55); }
