@@ -6,42 +6,20 @@ import { Button, Container, useInitialFocus } from '../components/spot';
 import { Icon } from '../components/Icon';
 import { useCanQueue } from '../components/TitleMenu';
 import { queues } from '../lib/store';
-import { toast } from '../lib/toast';
+import { shuffled, usePlayAll } from '../lib/playAll';
 import { t } from '../i18n';
 import { useNav } from '../lib/nav';
 import { START } from './Home';
-
-/** A copy of a list in a random order. */
-function shuffled<T>(list: T[]): T[] {
-  const out = list.slice();
-  for (let i = out.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    const x = out[i]; out[i] = out[j]; out[j] = x;
-  }
-  return out;
-}
 
 // A collection's page: its name and how many titles, Play and Shuffle (as the web's), then its
 // titles in the library's grid.
 export function CollectionPage({ id }: { id: string }) {
   const nav = useNav();
   const canQueue = useCanQueue();
-  const [starting, setStarting] = useState(false);
   // Plays the collection through Arc's play queue, in its order or shuffled; Arc adds a show's
   // episodes in its place (the web's collectionQueue does the same).
-  const start = async (items: Item[], shuffle: boolean) => {
-    if (starting) return;
-    setStarting(true);
-    try {
-      let q = await queues.start((shuffle ? shuffled(items) : items).map((it) => it.id));
-      if (q && shuffle) q = (await queues.shuffle()) ?? q;
-      const first = q?.entries.find((e) => e.id === q!.current_entry_id && e.available && e.item);
-      if (first?.item) nav.play(first.item, 0, { entryId: first.id });
-      else toast(t('collection.playFailed'));
-    } finally {
-      setStarting(false);
-    }
-  };
+  const playAll = usePlayAll(t('collection.playFailed'));
+  const start = (items: Item[], shuffle: boolean) => playAll(() => queues.start((shuffle ? shuffled(items) : items).map((it) => it.id)), shuffle);
   const root = useRef<HTMLDivElement>(null);
   const [page, setPage] = useState<Page | null>(null);
   const [error, setError] = useState('');

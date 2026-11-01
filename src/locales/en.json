@@ -28,6 +28,7 @@
   "nav.search": "Search",
   "nav.home": "Home",
   "nav.watchlist": "Watchlist",
+  "nav.playlists": "Playlists",
   "nav.switchProfile": "Switch Profile",
   "nav.signOut": "Sign Out",
   "nav.settings": "Settings",
@@ -277,5 +278,10 @@
   "player.cancel": "Cancel",
   "person.empty": "Nothing in your libraries with them yet.",
   "collection.playFailed": "Couldn't start playing this collection.",
-  "collection.empty": "This collection is empty."
+  "collection.empty": "This collection is empty.",
+  "playlists.one": "1 playlist",
+  "playlists.count": "{{n}} playlists",
+  "playlists.empty": "No playlists yet. Make one in Arc on the web, and it shows here.",
+  "playlists.emptyPlaylist": "This playlist is empty.",
+  "playlists.playFailed": "Couldn't start playing this playlist."
 }
