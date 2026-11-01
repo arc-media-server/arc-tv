@@ -127,6 +127,19 @@ export function formatLabels(files: MediaFile[] = []): string[] {
   return out;
 }
 
+/** A title's versions to choose from: its files on disk (a multi-part file counts once). */
+export function versionsOf(it: Item): MediaFile[] {
+  return (it.files ?? []).filter((f) => !f.missing && (f.part ?? 0) <= 1);
+}
+
+/** A version's name (its edition, else its resolution) and what sets it apart, as the player's Version list. */
+export function versionLabel(f: MediaFile): { name: string; detail: string } {
+  const v = (f.streams ?? []).find((s) => s.kind === 'video');
+  const res = resolutionName(v?.width, v?.height);
+  const rest = [hdrName(v), videoCodecName(v?.codec), f.size ? bytes(f.size) : ''].filter(Boolean);
+  return f.edition ? { name: f.edition, detail: [res, ...rest].filter(Boolean).join(' · ') } : { name: res || f.container?.toUpperCase() || '?', detail: rest.join(' · ') };
+}
+
 /** How long a title runs: its file's length, or the listed runtime. */
 export function durationMs(it: Item): number {
   const f = (it.files ?? []).find((x) => !x.missing && (x.duration_ms ?? 0) > 0);

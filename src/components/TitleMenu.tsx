@@ -4,12 +4,13 @@ import { t } from '../i18n';
 import {
   audioCodecName, bitrate, bytes, channelsName, hdrName, languageName, resolutionName, sameLanguage, videoCodecName, watched,
 } from '../lib/format';
-import { canUse, queues, setPlayed, setWatchlist, useChanges, withChanges } from '../lib/store';
+import { canUse, queue, queues, removeFromContinue, setPlayed, setWatchlist, useChanges, withChanges } from '../lib/store';
 import { toast } from '../lib/toast';
-import { CardMenuContext } from './Cards';
+import { CardMenuContext, type CardPlace } from './Cards';
 import { Overlay, Popover, PopoverItem } from './Menu';
 import { Scroller, type ScrollerHandle } from './Scroller';
-import { Button } from './spot';
+import { Button, focusElement } from './spot';
+import { Spotlight } from '@enact/spotlight';
 
 // A title's ⋯ menu (the web's ItemActions MoreMenu, for what a TV viewer can do) and Media Info.
 // The same menu opens from any card by holding OK (CardMenuHost).
@@ -46,7 +47,41 @@ export function useCanQueue(): boolean {
   return ok;
 }
 
-export function MoreMenu({ item, onMediaInfo, onClose }: { item: Item; onMediaInfo?: () => void; onClose: () => void }) {
+async function takeOffContinue(it: Item) {
+  try {
+    await removeFromContinue(it);
+  } catch {
+    toast(t('action.removeContinueFailed'));
+  }
+}
+
+/** What can be done to a queue entry: move it earlier or later (staying after what's playing), or take it out. */
+function useQueueMoves(entryId?: string) {
+  const q = queue.use();
+  if (!entryId || !q) return { earlier: false, later: false, remove: false };
+  const at = q.entries.findIndex((e) => e.id === entryId);
+  const current = q.entries.findIndex((e) => e.id === q.current_entry_id);
+  return { earlier: at > current + 1, later: at > current && at < q.entries.length - 1, remove: at > current };
+}
+
+async function queueEdit(run: () => Promise<unknown>) {
+  if (!(await run())) toast(t('queue.editFailed'));
+}
+
+/** Takes an entry off the queue; its card leaves Home's Queue row, so the focus stays on that row. */
+async function removeFromQueue(entryId: string) {
+  await queueEdit(() => queues.remove(entryId));
+  window.setTimeout(() => {
+    const cur = Spotlight.getCurrent() as HTMLElement | null;
+    if (cur && document.body.contains(cur)) return;
+    const next = document.querySelector('[data-row="queue"] .spottable') as HTMLElement | null;
+    if (next) focusElement(next);
+    else Spotlight.focus();
+  }, 0);
+}
+
+export function MoreMenu({ item, onMediaInfo, onPlayVersion, onClose, inContinue, queueEntry }: { item: Item; onMediaInfo?: () => void; onPlayVersion?: () => void; onClose: () => void; inContinue?: boolean; queueEntry?: string }) {
+  const moves = useQueueMoves(queueEntry);
   const canQueue = useCanQueue();
   const done = (fn: () => void) => () => { fn(); onClose(); };
   const on = !!item.user_data?.watchlisted;
@@ -60,6 +95,12 @@ export function MoreMenu({ item, onMediaInfo, onClose }: { item: Item; onMediaIn
           <PopoverItem icon="list" label={t('queue.add')} onClick={done(() => void addToQueue(item, false))} />
         </>
       )}
+      {onPlayVersion && <PopoverItem icon="film" label={t('details.playVersion')} onClick={onPlayVersion} />}
+      {inContinue && <PopoverItem icon="close" label={t('action.removeContinue')} onClick={done(() => void takeOffContinue(item))} />}
+      {/* A card on the queue's row: arrange the queue, as the web player's queue list. */}
+      {queueEntry && moves.earlier && <PopoverItem icon="arrowLeft" label={t('queue.moveEarlier')} onClick={done(() => void queueEdit(() => queues.move(queueEntry, -1)))} />}
+      {queueEntry && moves.later && <PopoverItem icon="arrowRight" label={t('queue.moveLater')} onClick={done(() => void queueEdit(() => queues.move(queueEntry, 1)))} />}
+      {queueEntry && moves.remove && <PopoverItem icon="close" label={t('queue.remove')} onClick={done(() => void removeFromQueue(queueEntry))} />}
       {onMediaInfo && <PopoverItem icon="info" label={t('action.mediaInfo')} onClick={onMediaInfo} />}
     </Popover>
   );
@@ -164,15 +205,15 @@ export function MediaInfo({ item, onClose }: { item: Item; onClose: () => void }
 
 /** Gives every card its hold-OK menu; Media Info opens from it for something playable. */
 export function CardMenuHost({ children }: { children: ReactNode }) {
-  const [open, setOpen] = useState<{ item: Item; info: boolean } | null>(null);
+  const [open, setOpen] = useState<{ item: Item; info: boolean; place?: CardPlace } | null>(null);
   const changes = useChanges();
   const item = open ? withChanges(open.item, changes) : null;
   return (
-    <CardMenuContext.Provider value={(it) => setOpen({ item: it, info: false })}>
+    <CardMenuContext.Provider value={(it, _from, place) => setOpen({ item: it, info: false, place })}>
       {children}
       {item && open && (open.info
         ? <MediaInfo item={item} onClose={() => setOpen(null)} />
-        : <MoreMenu item={item} onMediaInfo={item.kind !== 'series' ? () => setOpen({ item: open.item, info: true }) : undefined} onClose={() => setOpen(null)} />)}
+        : <MoreMenu item={item} inContinue={open.place?.inContinue} queueEntry={open.place?.queueEntry} onMediaInfo={item.kind !== 'series' ? () => setOpen({ item: open.item, info: true }) : undefined} onClose={() => setOpen(null)} />)}
     </CardMenuContext.Provider>
   );
 }

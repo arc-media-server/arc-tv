@@ -18,7 +18,7 @@ import { SettingsContent } from './Settings';
 // libraries with the Watchlist where the profile put it, Playlists after them, and the profile at the bottom) that opens
 // into labels when it has the focus, and the chosen section beside it.
 
-export type Section = { kind: 'home' } | { kind: 'search' } | { kind: 'watchlist' } | { kind: 'playlists' } | { kind: 'settings' } | { kind: 'library'; id: number };
+export type Section = { kind: 'home' } | { kind: 'search' } | { kind: 'watchlist' } | { kind: 'playlists' } | { kind: 'settings' } | { kind: 'library'; id: number; genre?: string; fromSearch?: boolean };
 
 const same = (a: Section, b: Section) => a.kind === b.kind && (a.kind !== 'library' || a.id === (b as { id: number }).id);
 
@@ -102,7 +102,8 @@ export function Browse({ profile, canSwitchProfile, serverName, onSwitchProfile,
     if (active) setVisits((v) => v + 1);
   }
 
-  useBack(() => { setSection({ kind: 'home' }); }, active && section.kind !== 'home');
+  // Back goes Home, or from a genre opened in Search, back to Search's results.
+  useBack(() => { setSection(section.kind === 'library' && section.fromSearch ? { kind: 'search' } : { kind: 'home' }); }, active && section.kind !== 'home');
 
   const show = (s: Section) => {
     if (same(s, section)) {
@@ -145,11 +146,11 @@ export function Browse({ profile, canSwitchProfile, serverName, onSwitchProfile,
     <div className="screen browse">
       <Container spotlightId="browse-content" className="browse-content">
         {section.kind === 'home' && <HomeContent prefs={prefs} libraries={frame.libraries} visits={visits} onReady={ready} />}
-        {section.kind === 'search' && <SearchContent onReady={ready} />}
+        {section.kind === 'search' && <SearchContent onReady={ready} onGenre={(g) => setSection({ kind: 'library', id: g.library_id, genre: g.name, fromSearch: true })} />}
         {section.kind === 'watchlist' && <WatchlistContent visits={visits} onReady={ready} />}
         {section.kind === 'playlists' && <PlaylistsContent visits={visits} onReady={ready} />}
         {section.kind === 'settings' && <SettingsContent serverName={serverName} onSwitchServer={onSwitchServer} onSignOut={onSignOut} onReady={ready} />}
-        {lib && <LibraryContent key={lib.id} library={lib} visits={visits} onReady={ready} />}
+        {lib && <LibraryContent key={`${lib.id}:${section.kind === 'library' ? section.genre ?? '' : ''}`} library={lib} genre={section.kind === 'library' ? section.genre : undefined} visits={visits} onReady={ready} />}
       </Container>
       <EntryContainer
         className={`sidebar${open ? ' open' : ''}`}

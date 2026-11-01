@@ -330,6 +330,13 @@ p { margin: 0 0 16px; }
 .search-field { position: relative; }
 .search-field .icon { position: absolute; left: 34px; top: 30px; color: rgba(245, 245, 247, 0.6); pointer-events: none; }
 .search-input:focus ~ .icon { color: #444; }
+.genre-pill {
+  display: inline-block; vertical-align: top; margin: 12px 20px 12px 0; padding: 18px 32px; border-radius: 44px;
+  background: rgba(255, 255, 255, 0.1); white-space: nowrap;
+}
+.genre-pill.spottable:focus { background: #fff; color: #111; box-shadow: none; transform: scale(1.06); }
+.genre-name { font-size: 28px; font-weight: 600; }
+.genre-where { font-size: 22px; margin-left: 14px; opacity: 0.65; }
 .search-empty { position: absolute; top: 300px; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; color: var(--muted); }
 .search-empty .icon { width: 96px; height: 96px; margin-bottom: 24px; opacity: 0.5; }
 .search-empty p { font-size: 30px; margin: 0; }
@@ -349,8 +356,12 @@ p { margin: 0 0 16px; }
 .action-label { height: 56px; padding-top: 16px; font-size: 26px; font-weight: 600; color: rgba(245, 245, 247, 0.8); }
 .seasons { padding-top: 8px; }
 .seasons .tabs { margin-bottom: 4px; }
-.episode-card { width: 344px; }
-.episode-overview { height: 72px; font-size: 22px; color: var(--muted); overflow: hidden; margin-top: 4px; }
+.episode-card { width: 400px; }
+.episode-kicker { font-size: 18px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+.episode-overview {
+  font-size: 22px; line-height: 1.35; color: rgba(245, 245, 247, 0.65); margin: 6px 0 6px; white-space: normal;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; max-height: 90px;
+}
 .details .shelf { padding-top: 24px; }
 
 /* Player */
@@ -420,6 +431,11 @@ p { margin: 0 0 16px; }
   margin: 0; font-size: 26px; line-height: 1.4; color: rgba(245, 245, 247, 0.85);
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; max-height: 110px;
 }
+.hero-about.can-open { transition: transform 0.2s, background-color 0.2s; border-radius: 16px; padding: 10px 14px; margin: -10px -14px -10px 26px; }
+.hero-about.can-open.spottable:focus { background: rgba(255, 255, 255, 0.14); box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35); transform: scale(1.02); }
+.about-text.spottable:focus { box-shadow: none; }
+.hero-more { display: block; font-size: 20px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #fff; margin-top: 2px; }
+.about-text { display: block; font-size: 28px; line-height: 1.45; color: rgba(245, 245, 247, 0.85); max-height: 820px; overflow: hidden; }
 .hero-meta { margin-top: 14px; display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; font-size: 22px; color: rgba(245, 245, 247, 0.7); }
 .hero-meta > span:first-child { margin-right: 16px; }
 .hero-meta .label { font-size: 18px; padding: 0 10px; margin-right: 10px; }
