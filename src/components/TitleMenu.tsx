@@ -46,7 +46,7 @@ export function useCanQueue(): boolean {
   return ok;
 }
 
-export function MoreMenu({ item, onMediaInfo, onClose }: { item: Item; onMediaInfo?: () => void; onClose: () => void }) {
+export function MoreMenu({ item, onMediaInfo, onPlayVersion, onClose }: { item: Item; onMediaInfo?: () => void; onPlayVersion?: () => void; onClose: () => void }) {
   const canQueue = useCanQueue();
   const done = (fn: () => void) => () => { fn(); onClose(); };
   const on = !!item.user_data?.watchlisted;
@@ -60,6 +60,7 @@ export function MoreMenu({ item, onMediaInfo, onClose }: { item: Item; onMediaIn
           <PopoverItem icon="list" label={t('queue.add')} onClick={done(() => void addToQueue(item, false))} />
         </>
       )}
+      {onPlayVersion && <PopoverItem icon="film" label={t('details.playVersion')} onClick={onPlayVersion} />}
       {onMediaInfo && <PopoverItem icon="info" label={t('action.mediaInfo')} onClick={onMediaInfo} />}
     </Popover>
   );

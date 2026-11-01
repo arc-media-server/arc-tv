@@ -6,9 +6,10 @@ import { Artwork } from '../components/Artwork';
 import { Icon } from '../components/Icon';
 import { Scroller } from '../components/Scroller';
 import { Button, Container, Focusable, useInitialFocus } from '../components/spot';
+import { Popover, PopoverItem } from '../components/Menu';
 import { MediaInfo, MoreMenu, toggleWatched, toggleWatchlist, useCanQueue } from '../components/TitleMenu';
 import { formatRuntime, formatTime, t } from '../i18n';
-import { episodeCode, formatLabels, languageName, resumeMs, watched } from '../lib/format';
+import { episodeCode, formatLabels, languageName, resumeMs, versionLabel, versionsOf, watched } from '../lib/format';
 import { useActive, useNav } from '../lib/nav';
 import { queues, useChanges, withChanges } from '../lib/store';
 
@@ -136,7 +137,7 @@ export function Details({ id, episodeId }: { id: string; episodeId?: string }) {
   const [related, setRelated] = useState<Related[]>([]);
   const [error, setError] = useState('');
   const [scrolled, setScrolled] = useState(false);
-  const [panel, setPanel] = useState<'more' | 'info' | null>(null);
+  const [panel, setPanel] = useState<'more' | 'info' | 'version' | null>(null);
   const [label, setLabel] = useState<string | null>(null);
   const changes = useChanges();
   const canQueue = useCanQueue();
@@ -280,7 +281,23 @@ export function Details({ id, episodeId }: { id: string; episodeId?: string }) {
         )}
         <InfoSection item={item} />
       </Scroller>
-      {panel === 'more' && <MoreMenu item={item} onMediaInfo={item.files?.length ? () => setPanel('info') : undefined} onClose={() => setPanel(null)} />}
+      {panel === 'more' && (
+        <MoreMenu
+          item={item}
+          onMediaInfo={item.files?.length ? () => setPanel('info') : undefined}
+          onPlayVersion={!series && versionsOf(item).length > 1 ? () => setPanel('version') : undefined}
+          onClose={() => setPanel(null)}
+        />
+      )}
+      {/* Plex's Play Version…: choose an edition or copy before playing, from where it was left. */}
+      {panel === 'version' && (
+        <Popover title={t('details.chooseVersion')} onClose={() => setPanel(null)}>
+          {versionsOf(item).map((f, i) => {
+            const v = versionLabel(f);
+            return <PopoverItem key={f.id} first={i === 0} icon="play" label={v.name} detail={v.detail} onClick={() => { setPanel(null); nav.play(item, resume, { fileId: f.id }); }} />;
+          })}
+        </Popover>
+      )}
       {panel === 'info' && <MediaInfo item={item} onClose={() => setPanel(null)} />}
     </div>
   );

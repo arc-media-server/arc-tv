@@ -163,6 +163,8 @@
   "details.moreLikeThis": "More Like This",
   "details.extras": "Extras",
   "details.noEpisodes": "No episodes on disk yet.",
+  "details.playVersion": "Play Version…",
+  "details.chooseVersion": "Play Version",
   "details.versions": "{{n}} versions",
   "details.newEpisodes": "{{n}} new",
   "extra.trailer": "Trailer",
