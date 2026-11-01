@@ -2,14 +2,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Item, Library, Prefs } from '../api';
 import { backdropOf, HeroBackdrop, RoundButton, TitleLogo } from '../components/Backdrop';
 import { Icon } from '../components/Icon';
-import { MediaCard, Strip } from '../components/Cards';
+import { ContinueRowContext, MediaCard, Strip } from '../components/Cards';
 import { Scroller } from '../components/Scroller';
 import { Button, Container } from '../components/spot';
 import { formatRuntime, formatTime, t } from '../i18n';
 import { episodeCode, formatLabels, resumeMs } from '../lib/format';
 import { cardFor, loadRow, resolveHomeRows, rowTitle, type Card, type RowSpec } from '../lib/home';
 import { useNav } from '../lib/nav';
-import { queue, queues, upcoming } from '../lib/store';
+import { queue, queues, upcoming, useOffContinue } from '../lib/store';
 
 // Home, as the Apple TV app's (owner, 31 October): a full-screen hero of featured titles (the
 // first of each row) with Play and More Info, Left and Right moving between them and the next one
@@ -59,6 +59,7 @@ export function HomeContent({ prefs, libraries, visits, onReady }: { prefs: Pref
   const specs = useMemo(() => resolveHomeRows(prefs, libraries), [prefs, libraries]);
   const [rows, setRows] = useState<Record<string, RowState>>({});
   const [heroAt, setHeroAt] = useState(0);
+  const off = useOffContinue();
   const [scrolled, setScrolled] = useState(false);
   const [label, setLabel] = useState<string | null>(null);
   const q = queue.use();
@@ -80,7 +81,12 @@ export function HomeContent({ prefs, libraries, visits, onReady }: { prefs: Pref
 
   const queueCards: Card[] = upcoming(q).map((e) => ({ ...cardFor(e.item!, `queue:${e.id}`), queueEntry: e.id }));
   const all = specs.concat(queueCards.length ? [queueRow] : []);
-  const stateOf = (spec: RowSpec): RowState => (spec.id === 'queue' ? { cards: queueCards } : rows[spec.id] ?? { cards: null });
+  const stateOf = (spec: RowSpec): RowState => {
+    if (spec.id === 'queue') return { cards: queueCards };
+    const st = rows[spec.id] ?? { cards: null };
+    // Titles taken out of Continue Watching leave at once, without reloading the row.
+    return spec.source.kind === 'continue' && st.cards ? { ...st, cards: st.cards.filter((c) => !off[c.item.id]) } : st;
+  };
   const visible = all.filter((s) => { const c = stateOf(s).cards; return !c || c.length > 0; });
   const ready = visible.filter((s) => stateOf(s).cards);
   const firstCard = ready.length ? stateOf(ready[0]).cards![0] : null;
@@ -179,6 +185,7 @@ export function HomeContent({ prefs, libraries, visits, onReady }: { prefs: Pref
                 </Container>
               )}
               {st.cards && (
+                <ContinueRowContext.Provider value={spec.source.kind === 'continue'}>
                 <Container className="row-cards">
                   <Strip start={START}>
                     {st.cards.map((card) => (
@@ -194,6 +201,7 @@ export function HomeContent({ prefs, libraries, visits, onReady }: { prefs: Pref
                     ))}
                   </Strip>
                 </Container>
+                </ContinueRowContext.Provider>
               )}
             </section>
           );

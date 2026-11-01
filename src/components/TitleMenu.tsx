@@ -4,7 +4,7 @@ import { t } from '../i18n';
 import {
   audioCodecName, bitrate, bytes, channelsName, hdrName, languageName, resolutionName, sameLanguage, videoCodecName, watched,
 } from '../lib/format';
-import { canUse, queues, setPlayed, setWatchlist, useChanges, withChanges } from '../lib/store';
+import { canUse, queues, removeFromContinue, setPlayed, setWatchlist, useChanges, withChanges } from '../lib/store';
 import { toast } from '../lib/toast';
 import { CardMenuContext } from './Cards';
 import { Overlay, Popover, PopoverItem } from './Menu';
@@ -46,7 +46,15 @@ export function useCanQueue(): boolean {
   return ok;
 }
 
-export function MoreMenu({ item, onMediaInfo, onClose }: { item: Item; onMediaInfo?: () => void; onClose: () => void }) {
+async function takeOffContinue(it: Item) {
+  try {
+    await removeFromContinue(it);
+  } catch {
+    toast(t('action.removeContinueFailed'));
+  }
+}
+
+export function MoreMenu({ item, onMediaInfo, onClose, inContinue }: { item: Item; onMediaInfo?: () => void; onClose: () => void; inContinue?: boolean }) {
   const canQueue = useCanQueue();
   const done = (fn: () => void) => () => { fn(); onClose(); };
   const on = !!item.user_data?.watchlisted;
@@ -60,6 +68,7 @@ export function MoreMenu({ item, onMediaInfo, onClose }: { item: Item; onMediaIn
           <PopoverItem icon="list" label={t('queue.add')} onClick={done(() => void addToQueue(item, false))} />
         </>
       )}
+      {inContinue && <PopoverItem icon="close" label={t('action.removeContinue')} onClick={done(() => void takeOffContinue(item))} />}
       {onMediaInfo && <PopoverItem icon="info" label={t('action.mediaInfo')} onClick={onMediaInfo} />}
     </Popover>
   );
@@ -164,15 +173,15 @@ export function MediaInfo({ item, onClose }: { item: Item; onClose: () => void }
 
 /** Gives every card its hold-OK menu; Media Info opens from it for something playable. */
 export function CardMenuHost({ children }: { children: ReactNode }) {
-  const [open, setOpen] = useState<{ item: Item; info: boolean } | null>(null);
+  const [open, setOpen] = useState<{ item: Item; info: boolean; inContinue?: boolean } | null>(null);
   const changes = useChanges();
   const item = open ? withChanges(open.item, changes) : null;
   return (
-    <CardMenuContext.Provider value={(it) => setOpen({ item: it, info: false })}>
+    <CardMenuContext.Provider value={(it, _from, inContinue) => setOpen({ item: it, info: false, inContinue })}>
       {children}
       {item && open && (open.info
         ? <MediaInfo item={item} onClose={() => setOpen(null)} />
-        : <MoreMenu item={item} onMediaInfo={item.kind !== 'series' ? () => setOpen({ item: open.item, info: true }) : undefined} onClose={() => setOpen(null)} />)}
+        : <MoreMenu item={item} inContinue={open.inContinue} onMediaInfo={item.kind !== 'series' ? () => setOpen({ item: open.item, info: true }) : undefined} onClose={() => setOpen(null)} />)}
     </CardMenuContext.Provider>
   );
 }
