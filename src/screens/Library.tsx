@@ -1,10 +1,11 @@
+import { Spotlight } from '@enact/spotlight';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, query, type CollectionRef, type Facets, type Item, type ItemPage, type Library, type RecommendedRow } from '../api';
 import { cardFor, MediaCard, Shelf } from '../components/Cards';
 import { TitleGrid } from '../components/Grid';
-import { MenuHeading, MenuItem, Overlay } from '../components/Menu';
+import { Popover, PopoverItem } from '../components/Menu';
 import { Scroller } from '../components/Scroller';
-import { Button, Container, Focusable } from '../components/spot';
+import { Button, Container, Focusable, focusElement } from '../components/spot';
 import { t, tMaybe } from '../i18n';
 import type { Card } from '../lib/home';
 import { useNav } from '../lib/nav';
@@ -72,73 +73,82 @@ function qualityName(v: string) {
   return ({ '4k': '4K', '1080': '1080p', '720': '720p', sd: 'SD' } as Record<string, string>)[v] ?? v;
 }
 
-function SortPanel({ q, onChoose, onClose }: { q: LibraryQuery; onChoose: (q: LibraryQuery) => void; onClose: () => void }) {
+function SortPanel({ q, from, onChoose, onClose }: { q: LibraryQuery; from?: ClientRect; onChoose: (q: LibraryQuery) => void; onClose: () => void }) {
   const [usual, other] = directions(q.sort);
+  const tick = (on: boolean) => (on ? 'check' : '');
+  // The Apple TV app's floating list, under the Sort button (owner, 1 November).
   return (
-    <Overlay width={840} onClose={onClose}>
-      <Scroller className="panel-list">
-        <MenuHeading>{t('library.sort')}</MenuHeading>
+    <Popover title={t('library.sort')} place="below" from={from} onClose={onClose}>
+      <Scroller className="popover-list" pad={24}>
         {sorts.map((s) => (
-          <MenuItem key={s} label={sortLabel(s)} checked={q.sort === s} first={q.sort === s} onClick={() => { if (s !== q.sort) onChoose({ ...q, sort: s, reverse: false }); }} />
+          <PopoverItem key={s} label={sortLabel(s)} icon={tick(q.sort === s)} first={q.sort === s} onClick={() => { if (s !== q.sort) onChoose({ ...q, sort: s, reverse: false }); }} />
         ))}
         {q.sort !== 'shuffle' && (
           <div data-section>
-            <MenuHeading>{t('sort.order')}</MenuHeading>
-            <MenuItem label={usual} checked={!q.reverse} onClick={() => { if (q.reverse) onChoose({ ...q, reverse: false }); }} />
-            <MenuItem label={other} checked={q.reverse} onClick={() => { if (!q.reverse) onChoose({ ...q, reverse: true }); }} />
+            <div className="popover-title popover-subtitle">{t('sort.order')}</div>
+            <PopoverItem label={usual} icon={tick(!q.reverse)} onClick={() => { if (q.reverse) onChoose({ ...q, reverse: false }); }} />
+            <PopoverItem label={other} icon={tick(q.reverse)} onClick={() => { if (!q.reverse) onChoose({ ...q, reverse: true }); }} />
           </div>
         )}
       </Scroller>
-    </Overlay>
+    </Popover>
   );
 }
 
 type FilterPage = 'main' | 'genre' | 'decade' | 'quality';
 
-function FilterPanel({ q, facets, onChoose, onClose }: { q: LibraryQuery; facets: Facets; onChoose: (q: LibraryQuery) => void; onClose: () => void }) {
+function FilterPanel({ q, facets, from, onChoose, onClose }: { q: LibraryQuery; facets: Facets; from?: ClientRect; onChoose: (q: LibraryQuery) => void; onClose: () => void }) {
   const [page, setPage] = useState<FilterPage>('main');
   const pick = (next: LibraryQuery) => { onChoose(next); setPage('main'); };
   const any = t('filter.any');
   // Back from a list returns to the filters, then closes them.
   const close = () => (page === 'main' ? onClose() : setPage('main'));
+  // One list whose page changes (not a new one each time, which lost where to go back to): the
+  // focus moves to the new page's current choice.
+  const shownPage = useRef(page);
+  useEffect(() => {
+    if (shownPage.current === page) return;
+    shownPage.current = page;
+    const timer = window.setTimeout(() => {
+      const el = document.querySelector('.popover .popover-item[data-default]') ?? document.querySelector('.popover .popover-item');
+      if (el) focusElement(el);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [page]);
   return (
-    <Overlay key={page} width={900} onClose={close}>
-      <Scroller className="panel-list">
+    <Popover from={from} title={page === 'main' ? t('library.filters') : t(page === 'genre' ? 'filter.genre' : page === 'decade' ? 'filter.decade' : 'filter.quality')} place="below" onClose={close}>
+      <Scroller className="popover-list" pad={24}>
         {page === 'main' && (
           <>
-            <MenuHeading>{t('library.filters')}</MenuHeading>
-            <MenuItem first label={t('filter.unwatched')} checked={q.unwatched} onClick={() => onChoose({ ...q, unwatched: !q.unwatched })} />
-            {!!facets.genres?.length && <MenuItem label={`${t('filter.genre')}: ${q.genre ?? any}`} onClick={() => setPage('genre')} />}
-            {!!facets.decades?.length && <MenuItem label={`${t('filter.decade')}: ${q.decade ? t('filter.decadeValue', { n: q.decade }) : any}`} onClick={() => setPage('decade')} />}
-            {!!facets.resolutions?.length && <MenuItem label={`${t('filter.quality')}: ${q.resolution ? qualityName(q.resolution) : any}`} onClick={() => setPage('quality')} />}
-            {filterCount(q) > 0 && <MenuItem icon="✕" label={t('filter.clear')} onClick={() => onChoose({ ...q, unwatched: false, genre: undefined, decade: undefined, resolution: undefined })} />}
+            <PopoverItem first label={t('filter.unwatched')} icon={q.unwatched ? 'check' : ''} onClick={() => onChoose({ ...q, unwatched: !q.unwatched })} />
+            {!!facets.genres?.length && <PopoverItem icon="" label={`${t('filter.genre')}: ${q.genre ?? any}`} onClick={() => setPage('genre')} />}
+            {!!facets.decades?.length && <PopoverItem icon="" label={`${t('filter.decade')}: ${q.decade ? t('filter.decadeValue', { n: q.decade }) : any}`} onClick={() => setPage('decade')} />}
+            {!!facets.resolutions?.length && <PopoverItem icon="" label={`${t('filter.quality')}: ${q.resolution ? qualityName(q.resolution) : any}`} onClick={() => setPage('quality')} />}
+            {filterCount(q) > 0 && <PopoverItem icon="close" label={t('filter.clear')} onClick={() => onChoose({ ...q, unwatched: false, genre: undefined, decade: undefined, resolution: undefined })} />}
           </>
         )}
         {page === 'genre' && (
           <>
-            <MenuHeading>{t('filter.genre')}</MenuHeading>
-            <MenuItem first label={any} checked={!q.genre} onClick={() => pick({ ...q, genre: undefined })} />
-            {facets.genres!.map((g) => <MenuItem key={g.value} label={g.value} checked={q.genre === g.value} onClick={() => pick({ ...q, genre: g.value })} />)}
+            <PopoverItem first label={any} icon={!q.genre ? 'check' : ''} onClick={() => pick({ ...q, genre: undefined })} />
+            {facets.genres!.map((g) => <PopoverItem key={g.value} label={g.value} icon={q.genre === g.value ? 'check' : ''} onClick={() => pick({ ...q, genre: g.value })} />)}
           </>
         )}
         {page === 'decade' && (
           <>
-            <MenuHeading>{t('filter.decade')}</MenuHeading>
-            <MenuItem first label={any} checked={!q.decade} onClick={() => pick({ ...q, decade: undefined })} />
+            <PopoverItem first label={any} icon={!q.decade ? 'check' : ''} onClick={() => pick({ ...q, decade: undefined })} />
             {facets.decades!.map((d) => parseInt(d.value, 10)).filter((d) => d > 0).sort((a, b) => b - a).map((d) => (
-              <MenuItem key={d} label={t('filter.decadeValue', { n: d })} checked={q.decade === d} onClick={() => pick({ ...q, decade: d })} />
+              <PopoverItem key={d} label={t('filter.decadeValue', { n: d })} icon={q.decade === d ? 'check' : ''} onClick={() => pick({ ...q, decade: d })} />
             ))}
           </>
         )}
         {page === 'quality' && (
           <>
-            <MenuHeading>{t('filter.quality')}</MenuHeading>
-            <MenuItem first label={any} checked={!q.resolution} onClick={() => pick({ ...q, resolution: undefined })} />
-            {facets.resolutions!.map((r) => <MenuItem key={r.value} label={qualityName(r.value)} checked={q.resolution === r.value} onClick={() => pick({ ...q, resolution: r.value })} />)}
+            <PopoverItem first label={any} icon={!q.resolution ? 'check' : ''} onClick={() => pick({ ...q, resolution: undefined })} />
+            {facets.resolutions!.map((r) => <PopoverItem key={r.value} label={qualityName(r.value)} icon={q.resolution === r.value ? 'check' : ''} onClick={() => pick({ ...q, resolution: r.value })} />)}
           </>
         )}
       </Scroller>
-    </Overlay>
+    </Popover>
   );
 }
 
@@ -213,7 +223,14 @@ export function LibraryContent({ library, visits, onReady }: { library: Library;
   const [recommended, setRecommended] = useState<Load<RecommendedRow[]>>({});
   const [collections, setCollections] = useState<Load<CollectionRef[]>>({});
   const [facets, setFacets] = useState<Facets>({});
-  const [panel, setPanel] = useState<'sort' | 'filters' | null>(null);
+  const [panel, setPanelState] = useState<'sort' | 'filters' | null>(null);
+  // Where the button that opened the list is, so the list stays under it as choices change things.
+  const [panelFrom, setPanelFrom] = useState<ClientRect | undefined>(undefined);
+  const setPanel = (p: 'sort' | 'filters' | null) => {
+    const el = p ? (Spotlight.getCurrent() as HTMLElement | null) : null;
+    setPanelFrom(el ? el.getBoundingClientRect() : undefined);
+    setPanelState(p);
+  };
   const [jump, setJump] = useState<{ index: number; n: number } | undefined>();
   const pages = useRef(new Set<number>());
   const generation = useRef(0);
@@ -332,8 +349,8 @@ export function LibraryContent({ library, visits, onReady }: { library: Library;
           />
         </div>
       )}
-      {panel === 'sort' && <SortPanel q={q} onChoose={choose} onClose={() => setPanel(null)} />}
-      {panel === 'filters' && <FilterPanel q={q} facets={facets} onChoose={choose} onClose={() => setPanel(null)} />}
+      {panel === 'sort' && <SortPanel q={q} from={panelFrom} onChoose={choose} onClose={() => setPanel(null)} />}
+      {panel === 'filters' && <FilterPanel q={q} facets={facets} from={panelFrom} onChoose={choose} onClose={() => setPanel(null)} />}
     </div>
   );
 }

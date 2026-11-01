@@ -293,9 +293,13 @@ p { margin: 0 0 16px; }
 .head-spacer { flex: 1 1 auto; }
 .head-count { font-size: 28px; margin-left: 24px; }
 .head-buttons { display: flex; flex-direction: row; align-items: center; }
-.tabs { display: flex; flex-direction: row; align-items: center; }
-.tab { padding: 14px 32px; border-radius: 40px; font-size: 28px; font-weight: 600; color: var(--muted); margin-right: 8px; white-space: nowrap; }
-.tab.selected { background: var(--surface3); color: var(--text); }
+.tabs { display: flex; flex-direction: row; align-items: center; padding: 6px; border-radius: 40px; background: rgba(255, 255, 255, 0.08); }
+/* The Apple TV app's segmented control: a glass pill holding the tabs, the current one lighter. */
+.tab { padding: 12px 30px; border-radius: 34px; font-size: 26px; font-weight: 600; color: rgba(245, 245, 247, 0.65); white-space: nowrap; }
+.tab + .tab { margin-left: 4px; }
+.tab.selected { background: rgba(255, 255, 255, 0.18); color: var(--text); }
+.head-buttons .btn { background: rgba(255, 255, 255, 0.1); }
+.head-buttons .btn:focus { background: var(--text); }
 .tab.spottable:focus { background: var(--text); color: var(--bg); transform: none; box-shadow: none; }
 .page-note { padding-left: 192px; padding-top: 32px; }
 .library-body, .library-titles { position: absolute; top: 150px; left: 0; right: 0; bottom: 0; }
@@ -314,9 +318,16 @@ p { margin: 0 0 16px; }
 
 /* Search */
 .search { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; }
-.search-head { padding-top: 64px; padding-bottom: 24px; }
-.search-input { width: 1100px; height: 96px; padding: 0 40px; font-size: 34px; border-radius: 48px; border: 3px solid var(--surface3); background: var(--surface); color: var(--text); outline: none; }
-.search-input:focus { border-color: var(--text); box-shadow: none; transform: none; }
+.search-head { padding-top: 64px; padding-bottom: 24px; display: flex; flex-direction: row; align-items: center; }
+/* As the Apple TV app's: a glass pill with a magnifier, white when focused. */
+.search-field { position: relative; }
+.search-field .icon { position: absolute; left: 34px; top: 30px; color: rgba(245, 245, 247, 0.6); pointer-events: none; }
+.search-input:focus ~ .icon { color: #444; }
+.search-empty { position: absolute; top: 300px; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; color: var(--muted); }
+.search-empty .icon { width: 96px; height: 96px; margin-bottom: 24px; opacity: 0.5; }
+.search-empty p { font-size: 30px; margin: 0; }
+.search-input { width: 1200px; height: 96px; padding: 0 40px 0 96px; font-size: 34px; border-radius: 48px; border: 0; background: rgba(255, 255, 255, 0.1); color: var(--text); outline: none; }
+.search-input:focus { background: var(--text); color: var(--bg); box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45); transform: none; }
 .search-body { position: absolute; top: 184px; left: 0; right: 0; bottom: 0; }
 .search-body .scroller-inner { padding-bottom: 60px; }
 
@@ -416,7 +427,7 @@ p { margin: 0 0 16px; }
 .info-value { font-size: 24px; color: rgba(245, 245, 247, 0.9); line-height: 1.35; }
 .side-spacer { flex: 1 1 auto; }
 .popover-noicon { display: inline-block; width: 30px; }
-.popover-list { max-height: 720px; }
+.popover-list { max-height: 790px; }
 
 /* Settings, as a tvOS settings list: a row per choice, the value on the right. */
 .settings { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; }
@@ -467,3 +478,4 @@ p { margin: 0 0 16px; }
 .timeline:focus .tl-knob { opacity: 1; }
 .tl-time { position: absolute; top: -52px; transform: translateX(-50%); font-size: 26px; font-weight: 600; }
 .ctl-times { display: flex; flex-direction: row; justify-content: space-between; margin-top: 10px; font-size: 24px; font-weight: 600; color: rgba(255, 255, 255, 0.8); }
+.popover-subtitle { padding-top: 18px; }
