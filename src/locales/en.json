@@ -182,6 +182,8 @@
   "action.watched": "Watched",
   "action.watchlist": "Watchlist",
   "action.more": "More",
+  "action.removeContinue": "Remove from Continue Watching",
+  "action.removeContinueFailed": "Couldn't remove it from Continue Watching.",
   "action.mediaInfo": "Media Info",
   "action.shuffle": "Shuffle",
   "action.watchedFailed": "Couldn't change whether it's watched. Try again.",
