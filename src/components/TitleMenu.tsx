@@ -80,7 +80,7 @@ async function removeFromQueue(entryId: string) {
   }, 0);
 }
 
-export function MoreMenu({ item, onMediaInfo, onClose, inContinue, queueEntry }: { item: Item; onMediaInfo?: () => void; onClose: () => void; inContinue?: boolean; queueEntry?: string }) {
+export function MoreMenu({ item, onMediaInfo, onPlayVersion, onClose, inContinue, queueEntry }: { item: Item; onMediaInfo?: () => void; onPlayVersion?: () => void; onClose: () => void; inContinue?: boolean; queueEntry?: string }) {
   const moves = useQueueMoves(queueEntry);
   const canQueue = useCanQueue();
   const done = (fn: () => void) => () => { fn(); onClose(); };
@@ -95,6 +95,7 @@ export function MoreMenu({ item, onMediaInfo, onClose, inContinue, queueEntry }:
           <PopoverItem icon="list" label={t('queue.add')} onClick={done(() => void addToQueue(item, false))} />
         </>
       )}
+      {onPlayVersion && <PopoverItem icon="film" label={t('details.playVersion')} onClick={onPlayVersion} />}
       {inContinue && <PopoverItem icon="close" label={t('action.removeContinue')} onClick={done(() => void takeOffContinue(item))} />}
       {/* A card on the queue's row: arrange the queue, as the web player's queue list. */}
       {queueEntry && moves.earlier && <PopoverItem icon="arrowLeft" label={t('queue.moveEarlier')} onClick={done(() => void queueEdit(() => queues.move(queueEntry, -1)))} />}
