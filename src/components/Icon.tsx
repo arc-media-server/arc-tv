@@ -27,6 +27,8 @@ const paths: Record<string, string> = {
   playlist: 'M3 6h13 M3 12h13 M3 18h8 M15 15v6l5-3z',
   folder: 'M3 6a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z',
   list: 'M8 6h13 M8 12h13 M8 18h13 M3 6h.01 M3 12h.01 M3 18h.01',
+  arrowLeft: 'M19 12H5 M12 19l-7-7l7-7',
+  arrowRight: 'M5 12h14 M12 5l7 7l-7 7',
   gauge: 'M4 18a8 8 0 1 1 16 0 M12 18l4-6',
   info: 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18z M12 11v6 M12 7.5v.01',
   tvShow: 'M3 7h18v12H3z M8 3l4 4l4-4',

@@ -13,7 +13,11 @@ import { Scroller } from './Scroller';
 // unwatched count in the corner and progress along the bottom; the title and a line under it.
 
 /** Holding OK on a card opens its title's menu (Watched, Watchlist, Play Next…), as Plex's long press. */
-export const CardMenuContext = createContext<((item: Item, from: HTMLElement | null) => void) | null>(null);
+/** Where a card is: Home's Continue Watching row, or the play queue's row (its entry). */
+export interface CardPlace { inContinue?: boolean; queueEntry?: string }
+export const CardMenuContext = createContext<((item: Item, from: HTMLElement | null, place?: CardPlace) => void) | null>(null);
+/** Set around Home's Continue Watching row, so its cards' menus can offer Remove from Continue Watching. */
+export const ContinueRowContext = createContext(false);
 
 export const menuKinds = ['movie', 'series', 'episode'];
 
@@ -122,6 +126,7 @@ export function MediaCard({ card, look = 'poster', seasonPoster, caption = true,
 }) {
   const changes = useChanges();
   const menu = useContext(CardMenuContext);
+  const inContinue = useContext(ContinueRowContext);
   const item = withChanges(card.item, changes);
   const shown: Card = item === card.item ? card : { ...card, item, progress: cardFor(item).progress };
   const thumb = look === 'thumb';
@@ -133,7 +138,7 @@ export function MediaCard({ card, look = 'poster', seasonPoster, caption = true,
       <Pressable
         className="card-face"
         onClick={onClick}
-        onHold={canMenu ? (el) => menu(item, el) : undefined}
+        onHold={canMenu ? (el) => menu(item, el, { inContinue, queueEntry: card.queueEntry }) : undefined}
         onFocus={onFocus ? () => onFocus() : undefined}
         data-default={first || undefined}
       >
