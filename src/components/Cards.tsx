@@ -78,6 +78,7 @@ export function cardTitle(card: Card): string {
 
 function cardSubtitle(card: Card, thumb: boolean): string {
   const it = card.item;
+  if (card.sub !== undefined) return card.sub;
   if (card.seasonNumber !== undefined) return `${t('details.season', { n: card.seasonNumber })} · ${t('details.newEpisodes', { n: card.newEpisodes ?? 0 })}`;
   if (it.kind === 'episode') {
     const code = episodeCode(it);
@@ -94,6 +95,15 @@ function BackdropArt({ card }: { card: Card }) {
       <Artwork path={card.backdrop} />
       <div className="backdrop-shade" />
       {logo ? <img className="backdrop-logo" src={logo} alt="" /> : logo === false && <div className="backdrop-title">{cardTitle(card)}</div>}
+    </div>
+  );
+}
+
+/** Four posters two by two (a playlist's picture, as the web's PlaylistCover). */
+function Mosaic({ paths }: { paths: string[] }) {
+  return (
+    <div className="artwork ratio-2x3 mosaic">
+      {paths.slice(0, 4).map((p, i) => <Artwork key={i} path={p} className={`mosaic-${i}`} />)}
     </div>
   );
 }
@@ -126,7 +136,7 @@ export function MediaCard({ card, look = 'poster', seasonPoster, caption = true,
         onFocus={onFocus ? () => onFocus() : undefined}
         data-default={first || undefined}
       >
-        {look === 'backdrop' ? <BackdropArt card={shown} /> : <Artwork path={art} label={cardTitle(shown)} className={thumb ? 'ratio-16x9' : 'ratio-2x3'} />}
+        {look === 'backdrop' ? <BackdropArt card={shown} /> : shown.mosaic && shown.mosaic.length >= 4 ? <Mosaic paths={shown.mosaic} /> : <Artwork path={art} label={cardTitle(shown)} className={thumb ? 'ratio-16x9' : 'ratio-2x3'} />}
         <WatchBadge item={item} />
         <ProgressLine progress={shown.progress} />
       </Pressable>

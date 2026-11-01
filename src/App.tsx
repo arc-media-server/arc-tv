@@ -14,6 +14,7 @@ import { useToast } from './lib/toast';
 import { forgetServer, loadSession, saveServer, saveToken, type SavedServer } from './session';
 import { Browse } from './screens/Browse';
 import { CollectionPage } from './screens/Collection';
+import { PlaylistPage } from './screens/Playlists';
 import { Details } from './screens/Details';
 import { ExtraPlayer, Player } from './screens/Player';
 import { PersonPage } from './screens/Person';
@@ -29,6 +30,7 @@ type Screen =
   | { name: 'browse' }
   | { name: 'details'; id: string; episodeId?: string }
   | { name: 'collection'; id: string }
+  | { name: 'playlist'; id: string }
   | { name: 'person'; id: number }
   | { name: 'player'; item: Item; startMs: number; entryId?: string; carryOn?: boolean }
   | { name: 'extra'; extra: Extra };
@@ -141,6 +143,7 @@ function App() {
     playExtra: (extra) => push({ name: 'extra', extra }),
     person: (id) => push({ name: 'person', id }),
     collection: (id) => push({ name: 'collection', id }),
+    playlist: (id) => push({ name: 'playlist', id }),
     back,
   }), [push, replace, back]);
 
@@ -198,6 +201,8 @@ function App() {
         return <Details id={s.id} episodeId={s.episodeId} />;
       case 'collection':
         return <CollectionPage id={s.id} />;
+      case 'playlist':
+        return <PlaylistPage id={s.id} />;
       case 'person':
         return <PersonPage id={s.id} />;
       case 'player':

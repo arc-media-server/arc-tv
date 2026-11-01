@@ -19,6 +19,7 @@ export interface Nav {
   playExtra(extra: Extra): void;
   person(id: number): void;
   collection(id: string): void;
+  playlist(id: string): void;
   back(): void;
 }
 
