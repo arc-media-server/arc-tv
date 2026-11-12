@@ -133,9 +133,9 @@ export function cardFor(item: Item, key = item.id): Card {
   };
 }
 
-/** A TV library's Recently Added card: a new show, new episodes of a season, or one episode. */
+/** A TV library's Recently Added card: one day's new episodes of a show, as the show, a season or the episode. */
 function recentCard(c: RecentCard): Card {
-  const base = cardFor(c.item, `${c.type}:${c.item.id}:${c.season_number ?? ''}`);
+  const base = cardFor(c.item, `${c.type}:${c.item.id}:${c.season_number ?? ''}:${c.added_at ?? ''}`);
   return c.type === 'season' ? { ...base, seasonNumber: c.season_number, newEpisodes: c.episodes, seasonPoster: c.season_poster ?? base.poster } : base;
 }
 
