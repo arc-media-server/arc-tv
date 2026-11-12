@@ -162,7 +162,9 @@ export interface Facets { genres?: { value: string; count: number }[]; decades?:
 
 export interface RecommendedRow { id?: string; type: string; title: string; name?: string; genre?: string; role?: string; style?: string; items: Item[] }
 
-export interface RecentCard { type: 'series' | 'season' | 'episode' | string; item: Item; season_number?: number; episodes?: number; season_poster?: string }
+/** One day's new episodes of a show, as the show, a season or the episode. The same show or season can
+ * appear more than once (one card per day's batch), so added_at is part of a card's identity. */
+export interface RecentCard { type: 'series' | 'season' | 'episode' | string; item: Item; season_number?: number; episodes?: number; season_poster?: string; added_at?: number }
 
 export interface HomeRowPref { id: string; hidden?: boolean; title?: string; filter?: Record<string, unknown>; style?: string; shows_only?: boolean; posters?: string }
 
