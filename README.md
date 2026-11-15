@@ -27,7 +27,8 @@ The screens and behaviour follow the Android TV app (arc-android), which follows
 - **Player:** direct play, remux or conversion as Arc decides from the TV's capabilities, falling
   back once to more conversion if the TV fails; resume and progress; the web's controls in its
   order (play, next, back/forward 10 s; audio, subtitles, version, quality, chapters, speed, info);
-  subtitles drawn by the app from WebVTT with the profile's style and language choices; timeline
+  subtitles drawn by the app from WebVTT with the profile's style and language choices, and picture
+  subtitles (PGS, VobSub) burned into the video by Arc; timeline
   thumbnails; skip intro/recap/credits; Up Next with a countdown; the play queue.
 
 ## Layout
