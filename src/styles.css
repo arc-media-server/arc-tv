@@ -362,6 +362,7 @@ p { margin: 0 0 16px; }
 .action-label { height: 56px; padding-top: 16px; font-size: 26px; font-weight: 600; color: rgba(245, 245, 247, 0.8); }
 .seasons { padding-top: 8px; }
 .seasons .tabs { margin-bottom: 4px; }
+.unplaced-note { font-size: 24px; margin: 16px 0 0; max-width: 1400px; }
 .episode-card { width: 400px; }
 .episode-kicker { font-size: 18px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
 .episode-overview {

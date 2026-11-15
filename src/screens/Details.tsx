@@ -17,10 +17,15 @@ import { queues, useChanges, withChanges } from '../lib/store';
 // backdrop, then Play (or Resume), Shuffle for a show, and Plex's round Watched, Watchlist and ⋯
 // buttons; a show's seasons and episodes in its display order; then the cast, the collections it's
 // in, More Like This and extras. Opened from an episode, it lands on that episode in its show.
+// Episodes on disk that the show's episode order leaves out get a last tab, Not in This Order, so
+// nothing silently disappears (Arc's rule); Play, Resume and Shuffle still follow the order.
 
 const PAGE_START = 96;
 
 interface Related { key: string; title?: string; items: Item[]; landscape: boolean }
+
+/** A tab under the show: one of its seasons, or the episodes its order doesn't include. */
+interface EpisodeTab { key: string; name: string; episodes: Item[]; unplaced: boolean }
 
 /** The episode to carry on with: one part-way through, else the first not watched, specials last. */
 function nextEpisode(seasons: Season[]): Item | undefined {
@@ -46,7 +51,7 @@ function shuffled<T>(list: T[]): T[] {
  * An episode as the Apple TV app shows one: its picture with progress and a tick, then its number,
  * its name, a few lines of its description, and its length (or what's left of it).
  */
-function EpisodeCard({ ep, first, onPlay }: { ep: Item; first: boolean; onPlay: () => void }) {
+function EpisodeCard({ ep, first, unplaced, onPlay }: { ep: Item; first: boolean; unplaced: boolean; onPlay: () => void }) {
   const menu = useContext(CardMenuContext);
   const card = cardFor(ep);
   const pos = resumeMs(ep);
@@ -62,7 +67,8 @@ function EpisodeCard({ ep, first, onPlay }: { ep: Item; first: boolean; onPlay: 
         <ProgressLine progress={card.progress} />
       </Pressable>
       <div className="card-caption">
-        {ep.episode_number !== undefined && <div className="episode-kicker">{t('details.episodeN', { n: ep.episode_number })}</div>}
+        {/* An episode outside the order has no number in it, so none is shown (as the web). */}
+        {!unplaced && ep.episode_number !== undefined && <div className="episode-kicker">{t('details.episodeN', { n: ep.episode_number })}</div>}
         <div className="card-title">{ep.title}</div>
         {ep.overview && <div className="episode-overview">{ep.overview}</div>}
         {sub && <div className="card-sub">{sub}</div>}
@@ -106,31 +112,43 @@ function About({ item, meta }: { item: Item; meta: string }) {
   );
 }
 
-function Seasons({ seasons, initial, focusId, onPlay }: { seasons: Season[]; initial: number; focusId?: string; onPlay: (ep: Item) => void }) {
+/** The show's seasons as tabs, then Not in This Order when the order leaves episodes out. */
+function episodeTabs(seasons: Season[], unplaced: Item[]): EpisodeTab[] {
+  const tabs = seasons.map((s) => ({ key: `season:${s.season_number}`, name: seasonName(s), episodes: s.episodes, unplaced: false }));
+  if (unplaced.length) tabs.push({ key: 'unplaced', name: t('details.notInOrder'), episodes: unplaced, unplaced: true });
+  return tabs;
+}
+
+function Seasons({ tabs, orderName, initial, focusId, onPlay }: { tabs: EpisodeTab[]; orderName?: string; initial: number; focusId?: string; onPlay: (ep: Item) => void }) {
   const [selected, setSelected] = useState(initial);
   const changes = useChanges();
-  if (!seasons.length) return <p className="muted" style={{ paddingLeft: PAGE_START }}>{t('details.noEpisodes')}</p>;
-  const season = seasons[Math.min(selected, seasons.length - 1)];
+  if (!tabs.length) return <p className="muted" style={{ paddingLeft: PAGE_START }}>{t('details.noEpisodes')}</p>;
+  const tab = tabs[Math.min(selected, tabs.length - 1)];
   return (
     <section className="seasons" data-section>
       <Container className="tabs" style={{ marginLeft: PAGE_START - 16 }}>
-        {seasons.map((s, i) => (
-          <Focusable key={s.season_number} className={`tab${i === selected ? ' selected' : ''}`} onFocus={() => setSelected(i)} onClick={() => setSelected(i)}>
-            {seasonName(s)}
+        {tabs.map((x, i) => (
+          <Focusable key={x.key} className={`tab${i === selected ? ' selected' : ''}`} onFocus={() => setSelected(i)} onClick={() => setSelected(i)}>
+            {x.name}
           </Focusable>
         ))}
       </Container>
+      {tab.unplaced && (
+        <p className="muted unplaced-note" style={{ paddingLeft: PAGE_START }}>
+          {orderName ? t('details.unplacedNote', { order: orderName }) : t('details.unplacedNoteNoName')}
+        </p>
+      )}
       <Container className="episodes">
-        <EpisodeStrip key={season.season_number} episodes={season.episodes.map((e) => withChanges(e, changes))} focusId={focusId} onPlay={onPlay} />
+        <EpisodeStrip key={tab.key} episodes={tab.episodes.map((e) => withChanges(e, changes))} unplaced={tab.unplaced} focusId={focusId} onPlay={onPlay} />
       </Container>
     </section>
   );
 }
 
-function EpisodeStrip({ episodes, focusId, onPlay }: { episodes: Item[]; focusId?: string; onPlay: (ep: Item) => void }) {
+function EpisodeStrip({ episodes, unplaced, focusId, onPlay }: { episodes: Item[]; unplaced: boolean; focusId?: string; onPlay: (ep: Item) => void }) {
   return (
     <Strip start={PAGE_START}>
-      {episodes.map((ep) => <EpisodeCard key={ep.id} ep={ep} first={ep.id === focusId} onPlay={() => onPlay(ep)} />)}
+      {episodes.map((ep) => <EpisodeCard key={ep.id} ep={ep} first={ep.id === focusId} unplaced={unplaced} onPlay={() => onPlay(ep)} />)}
     </Strip>
   );
 }
@@ -175,6 +193,8 @@ export function Details({ id, episodeId }: { id: string; episodeId?: string }) {
   const root = useRef<HTMLDivElement>(null);
   const [base, setBase] = useState<Item | null>(null);
   const [seasons, setSeasons] = useState<Season[] | null>(null);
+  const [unplaced, setUnplaced] = useState<Item[]>([]);
+  const [orderName, setOrderName] = useState<string | undefined>(undefined);
   const [related, setRelated] = useState<Related[]>([]);
   const [error, setError] = useState('');
   const [scrolled, setScrolled] = useState(false);
@@ -189,6 +209,8 @@ export function Details({ id, episodeId }: { id: string; episodeId?: string }) {
       if (it.kind === 'series') {
         const s = await api<SeasonsResponse>(`/series/${encodeURIComponent(id)}/seasons`);
         setSeasons((s.seasons ?? []).filter((x) => x.episodes && x.episodes.length));
+        setUnplaced(s.unplaced ?? []);
+        setOrderName(s.ordering?.name || undefined);
       }
       setBase(it);
       if (it.kind === 'episode') return;
@@ -215,9 +237,12 @@ export function Details({ id, episodeId }: { id: string; episodeId?: string }) {
 
   const item = base ? withChanges(base, changes) : null;
   const next = seasons ? nextEpisode(seasons) : undefined;
-  const focusEp = episodeId && seasons ? seasons.reduce<Item | undefined>((f, s) => f ?? s.episodes.find((e) => e.id === episodeId), undefined) : undefined;
+  // Play, Resume and Shuffle follow the order (seasons only); a tab opened on an episode can be
+  // Not in This Order, when that's where the episode is.
+  const tabs = seasons ? episodeTabs(seasons, unplaced) : [];
+  const focusEp = episodeId ? tabs.reduce<Item | undefined>((f, x) => f ?? x.episodes.find((e) => e.id === episodeId), undefined) : undefined;
   const land = focusEp ?? next;
-  const initialSeason = seasons && land ? Math.max(0, seasons.findIndex((s) => s.episodes.some((e) => e.id === land.id))) : 0;
+  const initialSeason = land ? Math.max(0, tabs.findIndex((x) => x.episodes.some((e) => e.id === land.id))) : 0;
   useInitialFocus(root, !!item && (item.kind !== 'series' || !!seasons));
 
   if (error) {
@@ -298,7 +323,7 @@ export function Details({ id, episodeId }: { id: string; episodeId?: string }) {
             <About item={item} meta={meta.filter(Boolean).join(' · ')} />
           </div>
         </section>
-        {series && seasons && <Seasons key={initialSeason} seasons={seasons} initial={initialSeason} focusId={focusEp?.id} onPlay={(ep) => nav.play(ep, resumeMs(ep))} />}
+        {series && seasons && <Seasons key={initialSeason} tabs={tabs} orderName={orderName} initial={initialSeason} focusId={focusEp?.id} onPlay={(ep) => nav.play(ep, resumeMs(ep))} />}
         {cast.length > 0 && (
           <Shelf title={t('details.cast')} start={PAGE_START}>
             {cast.map((c) => <PersonCard key={c.person_id} name={c.name} image={c.image} sub={c.character} onClick={() => nav.person(c.person_id)} />)}
