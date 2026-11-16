@@ -157,6 +157,8 @@ export function watched(it: Item): boolean {
 /** "S1 · E2", "Season 1" without an episode number, or '' when the item doesn't say (GET /items/{id}). */
 export function episodeCode(it: Item): string {
   if (it.season_number === undefined) return '';
+  // An episode outside the show's episode order has no place in it (Arc sends 0 and 0): no code.
+  if (it.season_number === 0 && it.episode_number === 0) return '';
   if (it.episode_number === undefined) return t('details.season', { n: it.season_number });
   return t('details.episode', { season: it.season_number, episode: it.episode_number });
 }

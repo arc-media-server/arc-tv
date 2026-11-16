@@ -187,7 +187,8 @@ export interface SearchResults { movies?: Item[]; shows?: Item[]; episodes?: Ite
 export interface PersonPage { person: Person; credits: { item: Item; roles?: string[]; character?: string }[] }
 
 export interface Season { season_number: number; name: string; poster?: string; episodes: Item[] }
-export interface SeasonsResponse { series: Item; seasons: Season[]; unplaced?: Item[] }
+/** A show's episodes in an episode order; `unplaced` are episodes on disk that the order doesn't include. */
+export interface SeasonsResponse { series: Item; seasons: Season[]; unplaced?: Item[] | null; ordering?: { id: number; name: string } | null }
 
 export interface CollectionPage { collection: CollectionRef; items: Item[] }
 /** A playlist in the list: its picture is a mosaic of up to four of its titles' posters. */
