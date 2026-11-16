@@ -11,7 +11,9 @@ import { MediaInfo, MoreMenu, toggleWatched, toggleWatchlist, useCanQueue } from
 import { formatRuntime, formatTime, t } from '../i18n';
 import { episodeCode, formatLabels, languageName, resumeMs, versionLabel, versionsOf, watched } from '../lib/format';
 import { useActive, useNav } from '../lib/nav';
-import { queues, useChanges, withChanges } from '../lib/store';
+import { queues, setSeasonPlayed, useChanges, withChanges } from '../lib/store';
+import { shuffled, usePlayAll } from '../lib/playAll';
+import { toast } from '../lib/toast';
 
 // A title's page, as the Android app's DetailsScreen: the same summary as Home's over the title's
 // backdrop, then Play (or Resume), Shuffle for a show, and Plex's round Watched, Watchlist and ⋯
@@ -31,15 +33,6 @@ function nextEpisode(seasons: Season[]): Item | undefined {
 
 function seasonName(s: Season) {
   return s.name || (s.season_number === 0 ? t('details.specials') : t('details.season', { n: s.season_number }));
-}
-
-function shuffled<T>(list: T[]): T[] {
-  const out = list.slice();
-  for (let i = out.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [out[i], out[j]] = [out[j], out[i]];
-  }
-  return out;
 }
 
 /**
@@ -106,22 +99,54 @@ function About({ item, meta }: { item: Item; meta: string }) {
   );
 }
 
-function Seasons({ seasons, initial, focusId, onPlay }: { seasons: Season[]; initial: number; focusId?: string; onPlay: (ep: Item) => void }) {
+/**
+ * The seasons as tabs with the chosen season's episodes under them. Beside the tabs, as on the
+ * web's show page: Shuffle Season and Mark Season as Watched (or Unwatched), for the season shown.
+ */
+function Seasons({ seriesId, seasons, initial, focusId, canQueue, onPlay, onSeasonMarked }: {
+  seriesId: string;
+  seasons: Season[];
+  initial: number;
+  focusId?: string;
+  canQueue: boolean;
+  onPlay: (ep: Item) => void;
+  onSeasonMarked: () => void;
+}) {
   const [selected, setSelected] = useState(initial);
   const changes = useChanges();
+  const playAll = usePlayAll(t('details.seasonPlayFailed'));
   if (!seasons.length) return <p className="muted" style={{ paddingLeft: PAGE_START }}>{t('details.noEpisodes')}</p>;
   const season = seasons[Math.min(selected, seasons.length - 1)];
+  const episodes = season.episodes.map((e) => withChanges(e, changes));
+  const onDisk = episodes.filter((e) => e.available !== false);
+  const seasonWatched = onDisk.length > 0 && onDisk.every((e) => e.user_data?.played);
+  const shuffleSeason = () => void playAll(() => queues.start(shuffled(onDisk).map((e) => e.id)), false);
+  const markSeason = () => {
+    setSeasonPlayed(seriesId, season.season_number, onDisk, !seasonWatched).then(onSeasonMarked, () => toast(t('action.watchedFailed')));
+  };
   return (
     <section className="seasons" data-section>
-      <Container className="tabs" style={{ marginLeft: PAGE_START - 16 }}>
-        {seasons.map((s, i) => (
-          <Focusable key={s.season_number} className={`tab${i === selected ? ' selected' : ''}`} onFocus={() => setSelected(i)} onClick={() => setSelected(i)}>
-            {seasonName(s)}
-          </Focusable>
-        ))}
-      </Container>
+      <div className="season-bar" style={{ marginLeft: PAGE_START - 16 }}>
+        <Container className="tabs">
+          {seasons.map((s, i) => (
+            <Focusable key={s.season_number} className={`tab${i === selected ? ' selected' : ''}`} onFocus={() => setSelected(i)} onClick={() => setSelected(i)}>
+              {seasonName(s)}
+            </Focusable>
+          ))}
+        </Container>
+        {onDisk.length > 0 && (
+          <Container className="head-buttons season-actions">
+            {canQueue && onDisk.length > 1 && (
+              <Button className="small" onClick={shuffleSeason}><Icon name="shuffle" size={26} /> {t('details.shuffleSeason')}</Button>
+            )}
+            <Button className="small" onClick={markSeason}>
+              <Icon name={seasonWatched ? 'circleCheck' : 'check'} size={26} /> {t(seasonWatched ? 'details.seasonUnwatched' : 'details.seasonWatched')}
+            </Button>
+          </Container>
+        )}
+      </div>
       <Container className="episodes">
-        <EpisodeStrip key={season.season_number} episodes={season.episodes.map((e) => withChanges(e, changes))} focusId={focusId} onPlay={onPlay} />
+        <EpisodeStrip key={season.season_number} episodes={episodes} focusId={focusId} onPlay={onPlay} />
       </Container>
     </section>
   );
@@ -298,7 +323,18 @@ export function Details({ id, episodeId }: { id: string; episodeId?: string }) {
             <About item={item} meta={meta.filter(Boolean).join(' · ')} />
           </div>
         </section>
-        {series && seasons && <Seasons key={initialSeason} seasons={seasons} initial={initialSeason} focusId={focusEp?.id} onPlay={(ep) => nav.play(ep, resumeMs(ep))} />}
+        {series && seasons && (
+          <Seasons
+            key={initialSeason}
+            seriesId={item.id}
+            seasons={seasons}
+            initial={initialSeason}
+            focusId={focusEp?.id}
+            canQueue={canQueue}
+            onPlay={(ep) => nav.play(ep, resumeMs(ep))}
+            onSeasonMarked={() => load(true)}
+          />
+        )}
         {cast.length > 0 && (
           <Shelf title={t('details.cast')} start={PAGE_START}>
             {cast.map((c) => <PersonCard key={c.person_id} name={c.name} image={c.image} sub={c.character} onClick={() => nav.person(c.person_id)} />)}
