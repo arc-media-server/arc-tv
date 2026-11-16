@@ -200,7 +200,7 @@ export interface Palette { available: boolean; colors?: { top_left: string; top_
 export interface Marker { kind: string; start_ms: number; end_ms: number }
 export interface Chapter { start_ms: number; end_ms?: number; title?: string }
 export interface AudioTrack { index: number; language?: string; title?: string; codec: string; channels: number; default?: boolean }
-export interface SubtitleTrack { id: string; language?: string; title?: string; codec: string; forced?: boolean; default?: boolean; hearing_impaired?: boolean; image?: boolean }
+export interface SubtitleTrack { id: string; language?: string; title?: string; codec: string; forced?: boolean; default?: boolean; hearing_impaired?: boolean; image?: boolean; external?: boolean }
 export interface Version { file_id: number; edition?: string; width?: number; height?: number; video_codec?: string; hdr?: string; size?: number }
 
 export interface Playback {
@@ -222,6 +222,8 @@ export interface Playback {
   markers?: Marker[];
   source_kbps?: number;
   server_limit_kbps?: number;
+  /** The picture subtitle track Arc is burning into this stream, when one was asked for. */
+  burn_subtitle?: string;
   /** The audio as Arc sends it (codec as ffprobe names it, channels, whether converted). */
   audio_output?: { codec?: string; channels?: number; converted?: boolean };
 }

@@ -361,7 +361,10 @@ p { margin: 0 0 16px; }
 .round-btn.spottable:focus { background: var(--text); color: var(--bg); box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45); }
 .action-label { height: 56px; padding-top: 16px; font-size: 26px; font-weight: 600; color: rgba(245, 245, 247, 0.8); }
 .seasons { padding-top: 8px; }
-.seasons .tabs { margin-bottom: 4px; }
+/* The season tabs, then the season's actions on the same line (no flex gap: Chrome 53). */
+.season-bar { display: flex; flex-direction: row; align-items: center; margin-bottom: 4px; }
+.season-actions { margin-left: 12px; }
+.season-actions .btn .icon { margin-right: 12px; }
 .unplaced-note { font-size: 24px; margin: 16px 0 0; max-width: 1400px; }
 .episode-card { width: 400px; }
 .episode-kicker { font-size: 18px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
