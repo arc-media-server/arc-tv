@@ -230,6 +230,8 @@
   "player.subtitlesOff": "Off",
   "player.track": "Track {{n}}",
   "player.forced": "Forced",
+  "player.burnedIn": "Burned in",
+  "player.burnFailed": "These subtitles can't be shown here, so they're off.",
   "player.version": "Version",
   "player.quality": "Quality",
   "player.automatic": "Automatic",

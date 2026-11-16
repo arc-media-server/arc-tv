@@ -9,11 +9,12 @@ import { Popover, PopoverItem } from '../components/Menu';
 import { Scroller } from '../components/Scroller';
 import { Button, Container, Focusable, Trap } from '../components/spot';
 import { formatTime, t } from '../i18n';
+import { toast } from '../lib/toast';
 import { useBack } from '../lib/back';
 import { audioCodecName, audioTrackName, channelsName, episodeCode, kbpsName, languageName, sameLanguage, videoCodecName } from '../lib/format';
 import { useNav } from '../lib/nav';
 import { clearChange, nextInQueue, prefs as loadPrefs, queue, queues, savePrefs } from '../lib/store';
-import { activeCues, chooseSubtitle as pickSubtitle, parseVTT, rememberedSubtitleLanguage, subtitleLook, type Cue } from '../lib/subtitles';
+import { activeCues, chooseSubtitle as pickSubtitle, parseVTT, playableSubtitles, rememberedSubtitleLanguage, subtitleLook, type Cue } from '../lib/subtitles';
 import type { NativePlayer, PlayerCaps } from '../platform/types';
 
 // Full-screen playback with the TV's own player, as the Android app's player: Arc decides direct
@@ -23,7 +24,9 @@ import type { NativePlayer, PlayerCaps } from '../platform/types';
 // close, a converting session is kept alive and ended on close. The controls match the web
 // player's: title and Close at the top; the timeline (with thumbnails while scrubbing); play,
 // next, back and forward 10 seconds; then audio, subtitles, version, quality, chapters, speed and
-// playback info. Skip Intro / Credits and the Up Next countdown follow Arc's markers.
+// playback info. Skip Intro / Credits and the Up Next countdown follow Arc's markers. Text
+// subtitles are drawn by the app; a picture track (PGS, VobSub) is burned into the video by Arc,
+// which restarts the stream converted, as the web player does.
 
 type Attempt = 'direct' | 'remux' | 'convert';
 type Menu = 'audio' | 'subtitles' | 'version' | 'quality' | 'chapters' | 'speed' | 'info' | null;
@@ -54,7 +57,7 @@ function subtitleName(s: SubtitleTrack, i: number) {
 }
 function subtitleDetail(s: SubtitleTrack) {
   const title = s.title && !sameLanguage(s.title, s.language) && !/^(forced|sdh)$/i.test(s.title) ? s.title : '';
-  return [s.forced ? t('player.forced') : '', s.hearing_impaired ? 'SDH' : '', title].filter(Boolean).join(' · ');
+  return [s.forced ? t('player.forced') : '', s.hearing_impaired ? 'SDH' : '', s.image ? t('player.burnedIn') : '', title].filter(Boolean).join(' · ');
 }
 
 /** One timeline thumbnail: the sheet shown at its scale, moved so only this tile shows. */
@@ -101,6 +104,8 @@ export function Player({ item: start, startMs, entryId, carryOn, fileId }: { ite
   const maxKbps = useRef<number | undefined>(undefined);
   const generation = useRef(0);
   const ended = useRef(false);
+  /** The picture subtitle track being burned into the video; restarts (seeks, audio, quality) keep it. */
+  const burn = useRef<string | undefined>(undefined);
   const itemId = start.id;
 
   const [item, setItem] = useState<Item>(start);
@@ -172,20 +177,28 @@ export function Player({ item: start, startMs, entryId, carryOn, fileId }: { ite
           // A new version starts with its own default audio.
           audio_stream: opts.audio ?? (opts.fileId === undefined && old && old.audio_stream >= 0 ? old.audio_stream : undefined),
           max_kbps: maxKbps.current,
+          burn_subtitle: burn.current,
         },
       });
-      if (gen !== generation.current) return;
-      const { url } = await api<{ url: string }>('/cast', { method: 'POST', body: { url: p.url } });
       if (gen !== generation.current) return;
       planRef.current = p;
       setPlan(p);
       if (!old) {
         const pr = prefsRef.current;
         const audioLang = p.audio_tracks?.find((a) => a.index === p.audio_stream)?.language;
-        setSubtitle(pickSubtitle(p.subtitle_tracks ?? [], pr.subtitle_language, audioLang, pr.subtitle_mode));
+        const first = pickSubtitle(p.subtitle_tracks ?? [], pr.subtitle_language, audioLang, pr.subtitle_mode);
+        setSubtitle(first);
+        // A picture track can only be shown burned in: ask again for a stream with it.
+        if (first?.image) {
+          burn.current = first.id;
+          void load(fromMs, opts);
+          return;
+        }
       } else {
         setSubtitle((s) => (s && (p.subtitle_tracks ?? []).some((x) => x.id === s.id) ? s : null));
       }
+      const { url } = await api<{ url: string }>('/cast', { method: 'POST', body: { url: p.url } });
+      if (gen !== generation.current) return;
       const native = platform.createPlayer(host.current!);
       player.current = native;
       native.on((ev, detail) => {
@@ -210,6 +223,15 @@ export function Player({ item: start, startMs, entryId, carryOn, fileId }: { ite
       if (e instanceof ApiError && e.status === 403) {
         setStopped(e.message);
         setLoading(false);
+        return;
+      }
+      // Arc couldn't burn the picture subtitles in (e.g. no converter here): play without them.
+      if (e instanceof ApiError && burn.current) {
+        console.warn(`Arc: burning in subtitle track ${burn.current} was refused (${e.status}); playing without it`);
+        burn.current = undefined;
+        setSubtitle(null);
+        toast(t('player.burnFailed'));
+        void load(fromMs, opts);
         return;
       }
       onStreamError((e as Error).message);
@@ -309,7 +331,7 @@ export function Player({ item: start, startMs, entryId, carryOn, fileId }: { ite
   // The chosen subtitle's cues, in file time.
   useEffect(() => {
     setCues([]);
-    if (!subtitle || !plan) return;
+    if (!subtitle || subtitle.image || !plan) return;
     let live = true;
     apiText(`/items/${enc(itemId)}/subtitles/${enc(subtitle.id)}/vtt?file=${plan.file_id}`).then((v) => { if (live) setCues(parseVTT(v)); }, () => {});
     return () => { live = false; };
@@ -466,7 +488,7 @@ export function Player({ item: start, startMs, entryId, carryOn, fileId }: { ite
   const showing = subtitle ? activeCues(cues, pos) : [];
   const chapters = plan?.chapters ?? [];
   const chapterAt = chapters.reduce((at, c, i) => (c.start_ms <= pos ? i : at), -1);
-  const textSubs = (plan?.subtitle_tracks ?? []).filter((s) => !s.image);
+  const subtitleTracks = playableSubtitles(plan?.subtitle_tracks);
 
   const chooseAudio = (index: number) => {
     setMenu(null);
@@ -487,6 +509,13 @@ export function Player({ item: start, startMs, entryId, carryOn, fileId }: { ite
       savePrefs({ subtitle_language: lang });
     }
     setSubtitle(s);
+    // A picture track is burned into the video by Arc, so turning one on, off or for another
+    // restarts the stream where it is.
+    const wantBurn = s?.image ? s.id : undefined;
+    if (wantBurn !== burn.current) {
+      burn.current = wantBurn;
+      void load(position());
+    }
   };
   const chooseQuality = (q: number) => {
     setMenu(null);
@@ -499,7 +528,13 @@ export function Player({ item: start, startMs, entryId, carryOn, fileId }: { ite
   };
   const chooseVersion = (fileId: number) => {
     setMenu(null);
-    if (fileId !== planRef.current?.file_id) void load(position(), { fileId });
+    if (fileId === planRef.current?.file_id) return;
+    // Another file has its own tracks: a burned-in one doesn't carry over.
+    if (burn.current) {
+      burn.current = undefined;
+      setSubtitle(null);
+    }
+    void load(position(), { fileId });
   };
   const chooseSpeed = (s: number) => {
     setMenu(null);
@@ -571,7 +606,7 @@ export function Player({ item: start, startMs, entryId, carryOn, fileId }: { ite
                   {control('fwd10', t('player.forward10'), () => seekBy(10000))}
                   <span className="ctl-gap" />
                   {plan && (plan.audio_tracks ?? []).length > 1 && control('audio', t('player.audio'), () => setMenu('audio'))}
-                  {plan && textSubs.length > 0 && control('captions', t('player.subtitles'), () => setMenu('subtitles'))}
+                  {plan && subtitleTracks.length > 0 && control('captions', t('player.subtitles'), () => setMenu('subtitles'))}
                   {plan && (plan.versions ?? []).length > 1 && control('film', t('player.version'), () => setMenu('version'))}
                   {plan && control('sliders', t('player.quality'), () => setMenu('quality'))}
                   {plan && chapters.length > 1 && control('list', t('player.chapters'), () => setMenu('chapters'))}
@@ -683,7 +718,7 @@ function PlayerMenu({ menu, plan, subtitle, quality, speed, chapterAt, caps, onC
     case 'subtitles':
       title = t('player.subtitles');
       options = [{ key: 'off', name: t('player.subtitlesOff'), selected: !subtitle, pick: () => onSubtitle(null) }].concat(
-        (plan.subtitle_tracks ?? []).filter((s) => !s.image).map((s, i) => ({ key: s.id, name: subtitleName(s, i), detail: subtitleDetail(s), selected: subtitle?.id === s.id, pick: () => onSubtitle(s) })),
+        playableSubtitles(plan.subtitle_tracks).map((s, i) => ({ key: s.id, name: subtitleName(s, i), detail: subtitleDetail(s), selected: subtitle?.id === s.id, pick: () => onSubtitle(s) })),
       );
       break;
     case 'version':
