@@ -4,6 +4,7 @@ import { sameLanguage } from './format';
 // Text subtitles, drawn by the app over the TV's player (its own subtitle support differs between
 // LG and Samsung, and can't load a track with the sign-in token). Arc converts any text track to
 // WebVTT (GET /items/{id}/subtitles/{track}/vtt); the cues are matched to the time in the file.
+// Picture tracks (PGS, VobSub) can't be drawn this way: Arc burns them into a converted stream.
 
 export interface Cue { start: number; end: number; text: string }
 
@@ -45,19 +46,25 @@ export function activeCues(cues: Cue[], ms: number): Cue[] {
   return out;
 }
 
+/** The tracks the player offers: text ones, and picture ones inside the file (Arc only burns those in). */
+export function playableSubtitles(tracks: SubtitleTrack[] = []): SubtitleTrack[] {
+  return tracks.filter((s) => !s.image || !s.external);
+}
+
 /**
- * The track to start with (the Android app's chooseSubtitle, after the web player): the profile's
- * language when its subtitle mode wants it, else a forced track in the audio's language.
+ * The track to start with (the web player's chooseSubtitle): the profile's language when its
+ * subtitle mode wants it, else a forced track in the audio's language. A text track is preferred;
+ * a picture one (PGS, VobSub) is chosen when it's all there is, and Arc burns it into the video.
  */
 export function chooseSubtitle(tracks: SubtitleTrack[], preferred = '', audioLanguage = '', mode = ''): SubtitleTrack | null {
-  const text = tracks.filter((s) => !s.image);
+  tracks = playableSubtitles(tracks);
   const wanted = mode === 'manual' ? false : mode === 'foreign' ? !!preferred && !!audioLanguage && !sameLanguage(audioLanguage, preferred) : true;
   if (preferred && wanted) {
-    const matching = text.filter((s) => sameLanguage(s.language, preferred));
-    const pick = matching.find((s) => !s.forced && !s.hearing_impaired) ?? matching.find((s) => !s.forced) ?? matching[0];
+    const matching = tracks.filter((s) => sameLanguage(s.language, preferred));
+    const pick = matching.find((s) => !s.forced && !s.hearing_impaired && !s.image) ?? matching.find((s) => !s.forced) ?? matching[0];
     if (pick) return pick;
   }
-  return text.find((s) => s.forced && (!s.language || !audioLanguage || sameLanguage(s.language, audioLanguage))) ?? null;
+  return tracks.find((s) => s.forced && (!s.language || !audioLanguage || sameLanguage(s.language, audioLanguage))) ?? null;
 }
 
 /** The subtitle language to remember when the viewer picks a track (null: nothing changes). */
