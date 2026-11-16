@@ -75,6 +75,27 @@ export async function setPlayed(it: Item, played: boolean) {
   }
 }
 
+/**
+ * Marks one season of a show watched or not (Arc's played with season_number, in the profile's
+ * episode order): its episodes show it at once and are put back if Arc refuses.
+ */
+export async function setSeasonPlayed(seriesId: string, seasonNumber: number, episodes: Item[], played: boolean) {
+  const before = changes.get();
+  const next = { ...before };
+  for (const ep of episodes) next[ep.id] = { ...next[ep.id], played };
+  changes.set(next);
+  try {
+    await api(`/items/${encodeURIComponent(seriesId)}/played`, { method: 'PUT', body: { played, season_number: seasonNumber } });
+  } catch (e) {
+    const back = { ...changes.get() };
+    for (const ep of episodes) {
+      if (before[ep.id]) back[ep.id] = before[ep.id]; else delete back[ep.id];
+    }
+    changes.set(back);
+    throw e;
+  }
+}
+
 export async function setWatchlist(it: Item, on: boolean) {
   const prev = changes.get()[it.id];
   change(it.id, { watchlisted: on });
