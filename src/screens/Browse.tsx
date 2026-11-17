@@ -14,6 +14,10 @@ import { PlaylistsContent } from './Playlists';
 import { SearchContent } from './Search';
 import { SettingsContent } from './Settings';
 
+// Live updates
+import { useLiveRefresh } from '../lib/live-updates';
+import { liveTopics } from '../lib/live-hints';
+
 // The main screen, as the Android app's BrowseScreen: a rail down the left (Search, Home, the
 // libraries with the Watchlist where the profile put it, Playlists after them, and the profile at the bottom) that opens
 // into labels when it has the focus, and the chosen section beside it.
@@ -95,6 +99,16 @@ export function Browse({ profile, canSwitchProfile, serverName, onSwitchProfile,
     }, (e) => setError((e as Error).message));
   }, []);
   useEffect(load, [load]);
+  // Live updates: defer library grids/search until the user leaves them.
+  useLiveRefresh(liveTopics.home, active && section.kind !== 'library' && section.kind !== 'search', () => {
+    // One result commit per batch keeps Home from starting duplicate row requests.
+    Promise.all([api<Library[]>('/libraries'), loadPrefs()]).then(([libs, p]) => {
+      const libraries = orderLibraries(libs, p.library_order);
+      setPrefs(p);
+      setFrame({ libraries, watchlistAt: Math.max(0, Math.min(p.watchlist_position ?? 0, libraries.length)) });
+      setVisits((v) => v + 1);
+    }, () => {});
+  });
 
   const [wasActive, setWasActive] = useState(active);
   if (active !== wasActive) {

@@ -1,3 +1,7 @@
+// Live updates
+import { useLiveRefresh } from '../lib/live-updates';
+import { liveTopics } from '../lib/live-hints';
+import { useActive } from '../lib/nav';
 import { useEffect, useState } from 'react';
 import type { Prefs } from '../api';
 import { Popover, PopoverItem } from '../components/Menu';
@@ -35,12 +39,14 @@ export function SettingsContent({ serverName, onSwitchServer, onSignOut, onReady
   onSignOut: () => void;
   onReady: () => void;
 }) {
+  const active = useActive();
   const [p, setP] = useState<Prefs | null>(null);
   const [picking, setPicking] = useState<Picking | null>(null);
   useEffect(() => {
     void loadPrefs().then((v) => { setP(v); onReady(); });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  useLiveRefresh(liveTopics.prefs, active && picking === null, () => { void loadPrefs().then(setP); });
   if (!p) return <div className="centered-fill"><div className="spinner" /></div>;
 
   const change = (next: Partial<Prefs>) => {
