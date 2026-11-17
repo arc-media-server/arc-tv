@@ -30,6 +30,8 @@ const paths: Record<string, string> = {
   arrowLeft: 'M19 12H5 M12 19l-7-7l7-7',
   arrowRight: 'M5 12h14 M12 5l7 7l-7 7',
   gauge: 'M4 18a8 8 0 1 1 16 0 M12 18l4-6',
+  // Star rating
+  star: 'M12 3l2.8 5.7l6.3.9l-4.6 4.4l1.1 6.3l-5.6-3l-5.6 3l1.1-6.3L3 9.6l6.2-.9z',
   info: 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18z M12 11v6 M12 7.5v.01',
   tvShow: 'M3 7h18v12H3z M8 3l4 4l4-4',
 };

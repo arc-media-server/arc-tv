@@ -384,6 +384,7 @@ export function Details({ id, episodeId }: { id: string; episodeId?: string }) {
       {panel === 'more' && (
         <MoreMenu
           item={item}
+          rating // Star rating: title pages only, as Android #34.
           onMediaInfo={item.files?.length ? () => setPanel('info') : undefined}
           onPlayVersion={!series && versionsOf(item).length > 1 ? () => setPanel('version') : undefined}
           onClose={() => setPanel(null)}
