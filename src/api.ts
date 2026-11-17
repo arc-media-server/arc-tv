@@ -158,7 +158,11 @@ export interface Library { id: number; name: string; kind: 'movies' | 'shows' | 
 
 export interface ItemPage { total: number; offset?: number; items: Item[]; letters?: { letter: string; count: number }[] }
 
-export interface Facets { genres?: { value: string; count: number }[]; decades?: { value: string; count: number }[]; resolutions?: { value: string; count: number }[] }
+type Facet = { value: string; count: number };
+export interface Facets {
+  genres?: Facet[]; decades?: Facet[]; resolutions?: Facet[];
+  dynamic_ranges?: Facet[]; video_codecs?: Facet[]; audio_codecs?: Facet[]; audio_channels?: Facet[];
+}
 
 export interface RecommendedRow { id?: string; type: string; title: string; name?: string; genre?: string; role?: string; style?: string; items: Item[] }
 
