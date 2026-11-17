@@ -5,6 +5,7 @@ import { Icon } from '../components/Icon';
 import { useCanQueue } from '../components/TitleMenu';
 import { Button, Container, useInitialFocus } from '../components/spot';
 import { formatRuntime, t } from '../i18n';
+import { countLabel } from '../lib/format';
 import type { Card } from '../lib/home';
 import { useNav } from '../lib/nav';
 import { shuffled, usePlayAll } from '../lib/playAll';
@@ -17,7 +18,7 @@ import { START } from './Home';
 /** A playlist's count and length: "6 titles · 12 hr 49 min". */
 function playlistLine(p: PlaylistRef, n = p.count ?? 0): string {
   const min = Math.round((p.duration_ms ?? 0) / 60000);
-  return [t('library.count', { n }), min > 0 ? formatRuntime(min) : ''].filter(Boolean).join(' · ');
+  return [countLabel(n), min > 0 ? formatRuntime(min) : ''].filter(Boolean).join(' · ');
 }
 
 const playlistCard = (p: PlaylistRef): Card => ({
@@ -25,7 +26,7 @@ const playlistCard = (p: PlaylistRef): Card => ({
   item: { id: p.id, kind: 'playlist', title: p.title },
   poster: p.images?.[0],
   mosaic: p.images,
-  sub: t('library.count', { n: p.count ?? 0 }),
+  sub: countLabel(p.count ?? 0),
 });
 
 /** The sidebar's Playlists: its name and count, then the playlists in the library's grid. */
