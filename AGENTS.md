@@ -1,15 +1,24 @@
 # Arc TV app: notes for AI agents
 
-The LG webOS / Samsung Tizen client for Arc Media Server. Arc's own repository holds the product
-rules (`CLAUDE.md` there): they apply here too, in particular pull requests only, change notes,
-noting decisions in the PR (or, when the owner has to choose, an Arc issue labelled
-`owner decision`; #80 is closed), all UI text through `t()`, and never marking real-device checks done
-without evidence.
+The LG webOS / Samsung Tizen client for Arc Media Server (one web app with Enact Spotlight,
+packaged as .ipk and .wgt, each TV's own player). Read `README.md`.
 
-- Talk to Arc only through `/api/v1` (`docs/api-v1-contract.txt` in Arc). If the app needs something
-  the API lacks, add it to Arc in its own PR.
-- Shared code goes in `src/`; anything that differs between TVs goes behind `src/platform/types.ts`.
-- Keep the bundle loadable on Chrome 53 (LG webOS 4.5, the owner's C9) from `file://`; no CSS grid or flex `gap`: run `npm run check` before every PR.
-- Spotlight (from Enact) handles focus; import its pieces by name (the packages are CommonJS).
-- Never commit signing material (Samsung certificates, LG seller details).
-- No agent session links in commits or PRs (no `Claude-Session:` or other chat URLs; owner, 13 November): the Co-Authored-By trailer is the only attribution. Earlier links are removed once, before the repository goes public (arc-media-server `docs/ALPHA-CHECKLIST.md`).
+**Shared rules:** arc-media-server's `docs/AGENT-RULES.md` applies here (workflow, decisions, Arc's
+design, API, logging). Read it at the start of a session: `../arc-media-server/docs/AGENT-RULES.md`
+when the server is checked out beside this one, otherwise from GitHub. The essentials:
+
+- Pull requests only: never push to main, never force push. Commits end with the Co-Authored-By
+  trailer only, no session links. A change note per change in `docs/changes/`.
+- Never point tests at the owner's server, data or keys. Never mark real-device checks done
+  without evidence. Never commit signing material (Samsung certificates, LG seller details).
+- Only `/api/v1`; if it lacks something, an additive server PR, linked.
+
+## This app
+
+- **Checks before a PR:** `npm run check` (types, both TV builds, the old-TV syntax check); walk
+  changed screens in the browser build with the remote keys (`npm run dev`, README).
+- Keep the bundle loadable on Chrome 53 (LG webOS 4.5, the owner's C9) from `file://`: no CSS grid
+  or flex `gap`.
+- Shared code in `src/`; anything that differs between TVs behind `src/platform/types.ts`.
+- Spotlight (Enact) handles focus; import its pieces by name (the packages are CommonJS).
+- All UI text through `t()` and `src/locales/en.json`.
