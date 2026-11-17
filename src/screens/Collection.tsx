@@ -8,6 +8,7 @@ import { useCanQueue } from '../components/TitleMenu';
 import { queues } from '../lib/store';
 import { shuffled, usePlayAll } from '../lib/playAll';
 import { t } from '../i18n';
+import { countLabel } from '../lib/format';
 import { useNav } from '../lib/nav';
 import { START } from './Home';
 
@@ -37,7 +38,7 @@ export function CollectionPage({ id }: { id: string }) {
     <div className="screen page" ref={root}>
       <div className="page-head" style={{ paddingLeft: START }}>
         <h1 className="page-title">{page.collection.title}</h1>
-        <span className="muted head-count">{t('library.count', { n: items.length })}</span>
+        <span className="muted head-count">{countLabel(items.length)}</span>
         {canQueue && items.length > 0 && (
           <Container className="head-buttons collection-play">
             <Button className="primary" data-default onClick={() => void start(items, false)}><Icon name="play" size={30} /> {t('details.play')}</Button>
