@@ -125,11 +125,13 @@ export function Popover({ title, body, place = 'side', shade = true, from, onClo
   });
   const box = useRef<HTMLDivElement>(null);
   const [top, setTop] = useState(at.top);
+  // Measured after every render: what's in it can arrive later (playlists loading, Play Next once
+  // the server says it keeps queues), and a taller list has to move up to stay on screen.
   useLayoutEffect(() => {
     const h = box.current ? box.current.offsetHeight : 0;
     // Level with the opener (or ending just above it), moved only as far as it takes to fit.
     setTop(Math.max(40, Math.min(at.above ? at.above - h : at.top, 1040 - h)));
-  }, [at.top, at.above]);
+  });
   return (
     <div className={shade ? 'popover-shade' : 'popover-layer'}>
       <div ref={box} className="popover-place" style={{ left: at.left, top, width: POPOVER_WIDTH }}>

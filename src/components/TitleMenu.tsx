@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { api, type Item, type MediaFile } from '../api';
+import { api, type Item, type MediaFile, type PlaylistRef } from '../api';
 import { t } from '../i18n';
 import {
-  audioCodecName, bitrate, bytes, channelsName, hdrName, languageName, resolutionName, sameLanguage, videoCodecName, watched,
+  audioCodecName, bitrate, bytes, channelsName, countLabel, hdrName, languageName, resolutionName, sameLanguage, videoCodecName, watched,
 } from '../lib/format';
 import { canUse, queue, queues, removeFromContinue, setPlayed, setWatchlist, useChanges, withChanges } from '../lib/store';
 import { toast } from '../lib/toast';
@@ -83,6 +83,55 @@ async function removeFromQueue(entryId: string) {
   }, 0);
 }
 
+/** Adds a title to one of the profile's playlists, with a note of what happened (the web's picker). */
+async function addToPlaylist(it: Item, list: PlaylistRef) {
+  try {
+    await api(`/playlists/${encodeURIComponent(list.id)}/items`, { method: 'POST', body: { item_ids: [it.id] } });
+    toast(t('playlist.added', { title: it.title, playlist: list.title }));
+  } catch {
+    toast(t('playlist.addFailed', { title: it.title, playlist: list.title }));
+  }
+}
+
+/**
+ * Add to Playlist: the profile's playlists, each with how many titles it holds. Smart playlists
+ * fill themselves, so they aren't listed (as on the web). New playlists are made on the web.
+ */
+function PlaylistPicker({ item, from, onClose }: { item: Item; from?: ClientRect; onClose: () => void }) {
+  const [lists, setLists] = useState<PlaylistRef[] | null>(null);
+  const [failed, setFailed] = useState(false);
+  const load = () => {
+    setFailed(false);
+    setLists(null);
+    api<PlaylistRef[]>('/playlists').then((all) => setLists((all ?? []).filter((p) => !p.smart_filter)), () => setFailed(true));
+  };
+  useEffect(load, []);
+  // The list arrives after the panel opens, so the focus moves onto it then.
+  useEffect(() => {
+    if (!lists && !failed) return;
+    const timer = window.setTimeout(() => {
+      const el = document.querySelector('.popover .popover-item');
+      if (el) focusElement(el);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [lists, failed]);
+  const what = t(item.kind === 'series' ? 'playlist.addShowTo' : 'playlist.addTo', { title: item.title });
+  const body = failed ? t('playlist.loadFailed') : !lists ? t('playlist.loading') : lists.length ? what : t('playlist.noneEditable');
+  return (
+    <Popover title={t('playlist.addTitle')} body={body} from={from} onClose={onClose}>
+      {failed && <PopoverItem first icon="" label={t('common.retry')} onClick={load} />}
+      {lists && !lists.length && <PopoverItem first icon="" label={t('common.close')} onClick={onClose} />}
+      {lists && lists.length > 0 && (
+        <Scroller className="popover-list" pad={24}>
+          {lists.map((p, i) => (
+            <PopoverItem key={p.id} first={i === 0} icon="" label={p.title} detail={countLabel(p.count ?? 0)} onClick={() => { onClose(); void addToPlaylist(item, p); }} />
+          ))}
+        </Scroller>
+      )}
+    </Popover>
+  );
+}
+
 export function MoreMenu({ item, onMediaInfo, onPlayVersion, onClose, inContinue, queueEntry, rating = false }: { item: Item; rating?: boolean; onMediaInfo?: () => void; onPlayVersion?: () => void; onClose: () => void; inContinue?: boolean; queueEntry?: string }) {
   // Star rating
   const [ratingOpen, setRatingOpen] = useState(false);
@@ -90,6 +139,10 @@ export function MoreMenu({ item, onMediaInfo, onPlayVersion, onClose, inContinue
   const canQueue = useCanQueue();
   const done = (fn: () => void) => () => { fn(); onClose(); };
   const on = !!item.user_data?.watchlisted;
+  // Where the ⋯ or card is, so Add to Playlist's list opens where this menu did.
+  const [opener] = useState(() => (Spotlight.getCurrent() as HTMLElement | null)?.getBoundingClientRect());
+  const [picking, setPicking] = useState(false);
+  if (picking) return <PlaylistPicker item={item} from={opener} onClose={onClose} />;
   if (ratingOpen) return <StarRating item={item} onClose={onClose} />;
   return (
     <Popover title={item.title} onClose={onClose}>
@@ -101,6 +154,7 @@ export function MoreMenu({ item, onMediaInfo, onPlayVersion, onClose, inContinue
           <PopoverItem icon="list" label={t('queue.add')} onClick={done(() => void addToQueue(item, false))} />
         </>
       )}
+      {queueable(item) && <PopoverItem icon="list" label={t('playlist.add')} onClick={() => setPicking(true)} />}
       {onPlayVersion && <PopoverItem icon="film" label={t('details.playVersion')} onClick={onPlayVersion} />}
       {inContinue && <PopoverItem icon="close" label={t('action.removeContinue')} onClick={done(() => void takeOffContinue(item))} />}
       {/* A card on the queue's row: arrange the queue, as the web player's queue list. */}

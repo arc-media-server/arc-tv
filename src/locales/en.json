@@ -310,5 +310,14 @@
   "playlists.count": "{{n}} playlists",
   "playlists.empty": "No playlists yet. Make one in Arc on the web, and it shows here.",
   "playlists.emptyPlaylist": "This playlist is empty.",
-  "playlists.playFailed": "Couldn't start playing this playlist."
+  "playlists.playFailed": "Couldn't start playing this playlist.",
+  "playlist.add": "Add to Playlist…",
+  "playlist.addTitle": "Add to Playlist",
+  "playlist.addTo": "Add “{{title}}” to:",
+  "playlist.addShowTo": "Add every episode of “{{title}}” to:",
+  "playlist.loading": "Loading your playlists…",
+  "playlist.loadFailed": "Couldn't load your playlists.",
+  "playlist.noneEditable": "You have no playlists to add to yet. Make one in Arc on the web, then add to it here.",
+  "playlist.added": "Added “{{title}}” to {{playlist}}",
+  "playlist.addFailed": "Couldn't add “{{title}}” to {{playlist}}."
 }
