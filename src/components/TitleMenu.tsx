@@ -11,6 +11,9 @@ import { Overlay, Popover, PopoverItem } from './Menu';
 import { Scroller, type ScrollerHandle } from './Scroller';
 import { Button, focusElement } from './spot';
 import { Spotlight } from '@enact/spotlight';
+// Star rating
+import { StarRating } from './StarRating';
+import { stars } from '../lib/ratings';
 
 // A title's ⋯ menu (the web's ItemActions MoreMenu, for what a TV viewer can do) and Media Info.
 // The same menu opens from any card by holding OK (CardMenuHost).
@@ -80,11 +83,14 @@ async function removeFromQueue(entryId: string) {
   }, 0);
 }
 
-export function MoreMenu({ item, onMediaInfo, onPlayVersion, onClose, inContinue, queueEntry }: { item: Item; onMediaInfo?: () => void; onPlayVersion?: () => void; onClose: () => void; inContinue?: boolean; queueEntry?: string }) {
+export function MoreMenu({ item, onMediaInfo, onPlayVersion, onClose, inContinue, queueEntry, rating = false }: { item: Item; rating?: boolean; onMediaInfo?: () => void; onPlayVersion?: () => void; onClose: () => void; inContinue?: boolean; queueEntry?: string }) {
+  // Star rating
+  const [ratingOpen, setRatingOpen] = useState(false);
   const moves = useQueueMoves(queueEntry);
   const canQueue = useCanQueue();
   const done = (fn: () => void) => () => { fn(); onClose(); };
   const on = !!item.user_data?.watchlisted;
+  if (ratingOpen) return <StarRating item={item} onClose={onClose} />;
   return (
     <Popover title={item.title} onClose={onClose}>
       <PopoverItem first icon={watched(item) ? 'circleCheck' : 'check'} label={t(watched(item) ? 'action.markUnwatched' : 'action.markWatched')} onClick={done(() => void toggleWatched(item))} />
@@ -101,6 +107,8 @@ export function MoreMenu({ item, onMediaInfo, onPlayVersion, onClose, inContinue
       {queueEntry && moves.earlier && <PopoverItem icon="arrowLeft" label={t('queue.moveEarlier')} onClick={done(() => void queueEdit(() => queues.move(queueEntry, -1)))} />}
       {queueEntry && moves.later && <PopoverItem icon="arrowRight" label={t('queue.moveLater')} onClick={done(() => void queueEdit(() => queues.move(queueEntry, 1)))} />}
       {queueEntry && moves.remove && <PopoverItem icon="close" label={t('queue.remove')} onClick={done(() => void removeFromQueue(queueEntry))} />}
+      {/* Star rating, after Play Version and before Media Info, as Android. */}
+      {rating && queueable(item) && <PopoverItem icon="star" label={t('rating.rate')} detail={stars(item.user_data?.rating ?? 0)} onClick={() => setRatingOpen(true)} />}
       {onMediaInfo && <PopoverItem icon="info" label={t('action.mediaInfo')} onClick={onMediaInfo} />}
     </Popover>
   );

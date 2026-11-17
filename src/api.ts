@@ -104,6 +104,9 @@ export interface Identity { id: string; name: string; version: string }
 
 export interface UserData { position_ms?: number; played: boolean; watchlisted?: boolean }
 
+// Star rating
+export interface UserData { rating?: number }
+
 export interface Images {
   primary?: string; backdrop?: string; backdrop_full?: string; logo?: string;
   series_primary?: string; series_backdrop?: string; series_logo?: string; season_primary?: string;
