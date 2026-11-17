@@ -2,7 +2,8 @@
 
 The LG webOS / Samsung Tizen client for Arc Media Server. Arc's own repository holds the product
 rules (`CLAUDE.md` there): they apply here too, in particular pull requests only, change notes,
-logging decisions on Arc's #80, all UI text through `t()`, and never marking real-device checks done
+noting decisions in the PR (or, when the owner has to choose, an Arc issue labelled
+`owner decision`; #80 is closed), all UI text through `t()`, and never marking real-device checks done
 without evidence.
 
 - Talk to Arc only through `/api/v1` (`docs/api-v1-contract.txt` in Arc). If the app needs something
