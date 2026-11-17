@@ -5,6 +5,7 @@ import { cardFor, MediaCard, Shelf } from '../components/Cards';
 import { TitleGrid } from '../components/Grid';
 import { Popover, PopoverItem } from '../components/Menu';
 import { Scroller } from '../components/Scroller';
+import { audioCodecName, channelsName, countLabel, videoCodecName } from '../lib/format';
 import { Button, Container, Focusable, focusElement } from '../components/spot';
 import { t, tMaybe } from '../i18n';
 import type { Card } from '../lib/home';
@@ -18,13 +19,27 @@ import { START } from './Home';
 
 type Tab = 'recommended' | 'titles' | 'folders' | 'collections';
 
-export interface LibraryQuery { sort: string; reverse: boolean; unwatched: boolean; genre?: string; decade?: number; resolution?: string }
+export interface LibraryQuery {
+  sort: string; reverse: boolean; unwatched: boolean; genre?: string; decade?: number; resolution?: string;
+  /** played or unstarted; it and Unwatched only exclude each other, as on the web. */
+  watchState?: string;
+  /** dolby_vision, hdr10_plus, hlg, hdr10, sdr or unknown. */
+  dynamicRange?: string; videoCodec?: string; audioCodec?: string; audioChannels?: number;
+}
 
 const defaultQuery: LibraryQuery = { sort: 'title', reverse: false, unwatched: false };
 // Each library's sort and filters, kept while the app runs, as the web keeps them per library.
 const queries = new Map<number, LibraryQuery>();
 
-const filterCount = (q: LibraryQuery) => [q.unwatched, !!q.genre, !!q.decade, !!q.resolution].filter(Boolean).length;
+const filterCount = (q: LibraryQuery) => [
+  q.unwatched, !!q.genre, !!q.decade, !!q.resolution, !!q.watchState, !!q.dynamicRange, !!q.videoCodec, !!q.audioCodec, !!q.audioChannels,
+].filter(Boolean).length;
+
+/** No filters (the sort stays). */
+const cleared = (q: LibraryQuery): LibraryQuery => ({ sort: q.sort, reverse: q.reverse, unwatched: false });
+
+/** A media filter shows when the library has more than one value, or one is already chosen (the web's offered). */
+const offered = (values: unknown[] | undefined, chosen: unknown) => (values?.length ?? 0) > 1 || chosen != null;
 
 const PAGE = 60;
 
@@ -40,6 +55,11 @@ function params(lib: Library, q: LibraryQuery, offset: number) {
     genre: q.genre,
     decade: q.decade,
     resolution: q.resolution,
+    watch_state: q.watchState,
+    dynamic_range: q.dynamicRange,
+    video_codec: q.videoCodec,
+    audio_codec: q.audioCodec,
+    audio_channels: q.audioChannels,
     letters: offset === 0 && q.sort === 'title' ? 1 : undefined,
   });
 }
@@ -96,10 +116,31 @@ function SortPanel({ q, from, onChoose, onClose }: { q: LibraryQuery; from?: Cli
   );
 }
 
-type FilterPage = 'main' | 'genre' | 'decade' | 'quality';
+type FilterPage = 'main' | 'genre' | 'decade' | 'quality' | 'watchState' | 'hdr' | 'video' | 'audio' | 'channels';
+
+const pageTitles: Record<Exclude<FilterPage, 'main'>, Parameters<typeof t>[0]> = {
+  genre: 'filter.genre', decade: 'filter.decade', quality: 'filter.quality', watchState: 'filter.watchState',
+  hdr: 'filter.hdr', video: 'filter.videoFormat', audio: 'filter.audioFormat', channels: 'filter.channels',
+};
+
+const watchStateName = (v: string) => t(v === 'played' ? 'filter.watched' : 'filter.notStarted');
+
+/** Dolby Vision, HDR10+, HLG, HDR10, SDR, or "Not known yet" (the web's dynamicRangeLabel). */
+function dynamicRangeName(v: string) {
+  return ({ dolby_vision: 'Dolby Vision', hdr10_plus: 'HDR10+', hlg: 'HLG', hdr10: 'HDR10', sdr: 'SDR' } as Record<string, string>)[v]
+    ?? (v === 'unknown' ? t('filter.hdrUnknown') : v);
+}
+
+/** The library's values for a filter, plus the chosen one if the library no longer has it, so it can be seen and changed. */
+function withChosen<T>(values: T[], chosen: T | undefined): T[] {
+  return chosen == null || values.includes(chosen) ? values : [...values, chosen];
+}
 
 function FilterPanel({ q, facets, from, onChoose, onClose }: { q: LibraryQuery; facets: Facets; from?: ClientRect; onChoose: (q: LibraryQuery) => void; onClose: () => void }) {
-  const [page, setPage] = useState<FilterPage>('main');
+  const [page, setPageState] = useState<FilterPage>('main');
+  // The row a list was opened from, so coming back to Filters lands on it again.
+  const [cameFrom, setCameFrom] = useState<FilterPage | null>(null);
+  const setPage = (next: FilterPage) => { if (next === 'main') setCameFrom(page === 'main' ? null : page); setPageState(next); };
   const pick = (next: LibraryQuery) => { onChoose(next); setPage('main'); };
   const any = t('filter.any');
   // Back from a list returns to the filters, then closes them.
@@ -116,38 +157,50 @@ function FilterPanel({ q, facets, from, onChoose, onClose }: { q: LibraryQuery; 
     }, 0);
     return () => window.clearTimeout(timer);
   }, [page]);
+
+  const values = (list?: { value: string }[]) => (list ?? []).map((f) => f.value);
+  const channels = Array.from(new Set(values(facets.audio_channels).map((v) => parseInt(v, 10)).filter((n) => n > 0))).sort((a, b) => b - a);
+
+  // A row on the main page: the filter's name and what it's set to, opening its own list.
+  const row = (to: FilterPage, label: string, value: string | undefined) => (
+    <PopoverItem icon="" first={cameFrom === to} label={`${label}: ${value ?? any}`} onClick={() => setPage(to)} />
+  );
+  // A filter's own list: Any, then its choices; choosing goes back to Filters.
+  function choices<T extends string | number>(list: T[], chosen: T | undefined, name: (v: T) => string, set: (v: T | undefined) => LibraryQuery) {
+    return (
+      <>
+        <PopoverItem first={chosen == null} label={any} icon={chosen == null ? 'check' : ''} onClick={() => pick(set(undefined))} />
+        {withChosen(list, chosen).map((v) => <PopoverItem key={String(v)} first={chosen === v} label={name(v)} icon={chosen === v ? 'check' : ''} onClick={() => pick(set(v))} />)}
+      </>
+    );
+  }
+
+  const decades = values(facets.decades).map((d) => parseInt(d, 10)).filter((d) => d > 0).sort((a, b) => b - a);
   return (
-    <Popover from={from} title={page === 'main' ? t('library.filters') : t(page === 'genre' ? 'filter.genre' : page === 'decade' ? 'filter.decade' : 'filter.quality')} place="below" onClose={close}>
+    <Popover from={from} title={page === 'main' ? t('library.filters') : t(pageTitles[page])} place="below" onClose={close}>
       <Scroller className="popover-list" pad={24}>
         {page === 'main' && (
           <>
-            <PopoverItem first label={t('filter.unwatched')} icon={q.unwatched ? 'check' : ''} onClick={() => onChoose({ ...q, unwatched: !q.unwatched })} />
-            {!!facets.genres?.length && <PopoverItem icon="" label={`${t('filter.genre')}: ${q.genre ?? any}`} onClick={() => setPage('genre')} />}
-            {!!facets.decades?.length && <PopoverItem icon="" label={`${t('filter.decade')}: ${q.decade ? t('filter.decadeValue', { n: q.decade }) : any}`} onClick={() => setPage('decade')} />}
-            {!!facets.resolutions?.length && <PopoverItem icon="" label={`${t('filter.quality')}: ${q.resolution ? qualityName(q.resolution) : any}`} onClick={() => setPage('quality')} />}
-            {filterCount(q) > 0 && <PopoverItem icon="close" label={t('filter.clear')} onClick={() => onChoose({ ...q, unwatched: false, genre: undefined, decade: undefined, resolution: undefined })} />}
+            <PopoverItem first={!cameFrom} label={t('filter.unwatched')} icon={q.unwatched ? 'check' : ''} onClick={() => onChoose({ ...q, unwatched: !q.unwatched, watchState: q.unwatched ? q.watchState : undefined })} />
+            {row('watchState', t('filter.watchState'), q.watchState && watchStateName(q.watchState))}
+            {!!facets.genres?.length && row('genre', t('filter.genre'), q.genre)}
+            {!!facets.decades?.length && row('decade', t('filter.decade'), q.decade ? t('filter.decadeValue', { n: q.decade }) : undefined)}
+            {!!facets.resolutions?.length && row('quality', t('filter.quality'), q.resolution && qualityName(q.resolution))}
+            {offered(facets.dynamic_ranges, q.dynamicRange) && row('hdr', t('filter.hdr'), q.dynamicRange && dynamicRangeName(q.dynamicRange))}
+            {offered(facets.video_codecs, q.videoCodec) && row('video', t('filter.videoFormat'), q.videoCodec && videoCodecName(q.videoCodec))}
+            {offered(facets.audio_codecs, q.audioCodec) && row('audio', t('filter.audioFormat'), q.audioCodec && audioCodecName(q.audioCodec))}
+            {offered(channels, q.audioChannels) && row('channels', t('filter.channels'), q.audioChannels ? channelsName(q.audioChannels) : undefined)}
+            {filterCount(q) > 0 && <PopoverItem icon="close" label={t('filter.clear')} onClick={() => onChoose(cleared(q))} />}
           </>
         )}
-        {page === 'genre' && (
-          <>
-            <PopoverItem first label={any} icon={!q.genre ? 'check' : ''} onClick={() => pick({ ...q, genre: undefined })} />
-            {facets.genres!.map((g) => <PopoverItem key={g.value} label={g.value} icon={q.genre === g.value ? 'check' : ''} onClick={() => pick({ ...q, genre: g.value })} />)}
-          </>
-        )}
-        {page === 'decade' && (
-          <>
-            <PopoverItem first label={any} icon={!q.decade ? 'check' : ''} onClick={() => pick({ ...q, decade: undefined })} />
-            {facets.decades!.map((d) => parseInt(d.value, 10)).filter((d) => d > 0).sort((a, b) => b - a).map((d) => (
-              <PopoverItem key={d} label={t('filter.decadeValue', { n: d })} icon={q.decade === d ? 'check' : ''} onClick={() => pick({ ...q, decade: d })} />
-            ))}
-          </>
-        )}
-        {page === 'quality' && (
-          <>
-            <PopoverItem first label={any} icon={!q.resolution ? 'check' : ''} onClick={() => pick({ ...q, resolution: undefined })} />
-            {facets.resolutions!.map((r) => <PopoverItem key={r.value} label={qualityName(r.value)} icon={q.resolution === r.value ? 'check' : ''} onClick={() => pick({ ...q, resolution: r.value })} />)}
-          </>
-        )}
+        {page === 'watchState' && choices(['played', 'unstarted'], q.watchState, watchStateName, (v) => ({ ...q, watchState: v, unwatched: v ? false : q.unwatched }))}
+        {page === 'genre' && choices(values(facets.genres), q.genre, (v) => v, (v) => ({ ...q, genre: v }))}
+        {page === 'decade' && choices(decades, q.decade, (v) => t('filter.decadeValue', { n: v }), (v) => ({ ...q, decade: v }))}
+        {page === 'quality' && choices(values(facets.resolutions), q.resolution, qualityName, (v) => ({ ...q, resolution: v }))}
+        {page === 'hdr' && choices(values(facets.dynamic_ranges), q.dynamicRange, dynamicRangeName, (v) => ({ ...q, dynamicRange: v }))}
+        {page === 'video' && choices(values(facets.video_codecs), q.videoCodec, videoCodecName, (v) => ({ ...q, videoCodec: v }))}
+        {page === 'audio' && choices(values(facets.audio_codecs), q.audioCodec, (v) => audioCodecName(v), (v) => ({ ...q, audioCodec: v }))}
+        {page === 'channels' && choices(channels, q.audioChannels, channelsName, (v) => ({ ...q, audioChannels: v }))}
       </Scroller>
     </Popover>
   );
@@ -315,7 +368,7 @@ export function LibraryContent({ library, genre, visits, onReady }: { library: L
         {shown === 'titles' && (
           <>
             <div className="head-spacer" />
-            {total !== null && <span className="muted head-count">{t('library.count', { n: total })}</span>}
+            {total !== null && <span className="muted head-count">{countLabel(total)}</span>}
             <Container className="head-buttons">
               <Button className="small" onClick={() => setPanel('sort')}>{sortLabel(q.sort)}</Button>
               <Button className="small" onClick={() => setPanel('filters')}>{n > 0 ? t('library.filtersOn', { n }) : t('library.filters')}</Button>
@@ -380,7 +433,7 @@ export function WatchlistContent({ visits, onReady }: { visits: number; onReady:
     <div className="library">
       <div className="page-head" style={{ paddingLeft: START }}>
         <h1 className="page-title">{t('nav.watchlist')}</h1>
-        {items && <span className="muted head-count">{t('library.count', { n: items.length })}</span>}
+        {items && <span className="muted head-count">{countLabel(items.length)}</span>}
       </div>
       {error && <div className="page-note"><p className="error">{error}</p><Button onClick={load}>{t('common.retry')}</Button></div>}
       {items && !items.length && <p className="muted page-note">{t('watchlist.empty')}</p>}
