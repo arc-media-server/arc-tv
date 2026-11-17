@@ -22,6 +22,9 @@ import { Profiles } from './screens/Profiles';
 import { ServerPick } from './screens/ServerPick';
 import { SignIn } from './screens/SignIn';
 
+// Live updates
+import { useLiveUpdates } from './lib/live-updates';
+
 type Screen =
   | { name: 'starting' }
   | { name: 'servers' }
@@ -103,6 +106,8 @@ function App() {
 
   // When a screen shows (again), put the focus back where it was, or somewhere sensible.
   const top = stack[stack.length - 1];
+  // Live updates: player stays mounted; profile selection/sign-out closes its old stream.
+  useLiveUpdates(status?.profile?.id, !!status?.profile && !['starting', 'servers', 'signin', 'profiles'].includes(top.screen.name));
   useEffect(() => {
     const timer = window.setTimeout(() => {
       const cur = Spotlight.getCurrent() as HTMLElement | null;

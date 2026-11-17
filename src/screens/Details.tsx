@@ -1,3 +1,6 @@
+// Live updates
+import { useLiveRefresh } from '../lib/live-updates';
+import { liveTopics } from '../lib/live-hints';
 import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { api, type CollectionPage, type Item, type Season, type SeasonsResponse } from '../api';
 import { HeroBackdrop, RoundButton, TitleLogo } from '../components/Backdrop';
@@ -255,6 +258,8 @@ export function Details({ id, episodeId }: { id: string; episodeId?: string }) {
   }, [id]);
 
   useEffect(() => { load(false); }, [load]);
+  // Live updates: preserve the title and focused menu while hints arrive.
+  useLiveRefresh(liveTopics.title, active && panel === null, () => load(true));
 
   // Coming back from the player: the new resume point and watched state.
   const wasActive = useRef(active);
