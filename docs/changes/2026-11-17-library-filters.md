@@ -37,9 +37,9 @@ the library no longer has it, so it can be seen and changed.
 - `npm run check`: types, webOS and Tizen builds, ES2016 syntax check, all pass.
 - In desktop Chromium (the browser build) against a scratch Arc with four generated films (H.264
   stereo, HEVC 5.1, HEVC HDR10 E-AC-3 5.1, H.264 7.1), driven with the remote keys:
-  - Filters lists all nine rows (`filters.jpg`); HDR offers SDR and HDR10 (`hdr-list.jpg`);
-  - HDR10 leaves Interstellar ("1 title"), and focus returns to "HDR: HDR10";
-  - reopening HDR lands on HDR10; Audio Channels lists 7.1, 5.1, Stereo (`channels-list.jpg`);
+  - Filters lists all nine rows; HDR offers SDR and HDR10;
+  - HDR10 leaves Interstellar ("1 title"), and focus returns to "HDR: HDR10" (`filters.jpg`);
+  - reopening HDR lands on HDR10 (`hdr-list.jpg`); Audio Channels lists 7.1, 5.1, Stereo (`channels-list.jpg`);
   - adding 7.1 shows "Nothing matches. Try fewer filters." and "Filters (2)" (`two-filters.jpg`).
 - Not tried on an LG or Samsung TV or their simulators.
 
