@@ -29,7 +29,7 @@ the library no longer has it, so it can be seen and changed.
 
 ## Decisions
 
-- Same rows, order and rules as Android TV (arc-android#43's library filters), so the two TV apps
+- Same rows, order and rules as Android TV's library filters, so the two TV apps
   match. Watch Status is always offered; the media filters only when they'd narrow something.
 
 ## Checks
