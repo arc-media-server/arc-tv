@@ -19,7 +19,7 @@ function store<T>(initial: T) {
 
 // --- Watched and Watchlist changes made in the app, shown at once on every card of that title ---
 
-type Change = { played?: boolean; watchlisted?: boolean };
+type Change = { played?: boolean; watchlisted?: boolean; /* Star rating */ rating?: number };
 const changes = store<Record<string, Change>>({});
 
 export function useChanges() { return changes.use(); }
@@ -34,6 +34,8 @@ export function withChanges(it: Item, all: Record<string, Change>): Item {
     ud.position_ms = 0;
   }
   if (c.watchlisted !== undefined) ud.watchlisted = c.watchlisted;
+  // Star rating
+  if (c.rating !== undefined) ud.rating = c.rating;
   const unwatched = it.kind === 'series' && c.played !== undefined ? (c.played ? 0 : it.unwatched_count || undefined) : it.unwatched_count;
   return { ...it, user_data: ud, unwatched_count: unwatched };
 }
@@ -101,6 +103,19 @@ export async function setWatchlist(it: Item, on: boolean) {
   change(it.id, { watchlisted: on });
   try {
     await api(`/items/${encodeURIComponent(it.id)}/watchlist`, { method: 'PUT', body: { on } });
+  } catch (e) {
+    undo(it.id, prev);
+    throw e;
+  }
+}
+
+// Star rating: optimistic, with the same rollback as the other title actions.
+export async function setRating(it: Item, rating: number) {
+  if (rating === (it.user_data?.rating ?? 0)) return;
+  const prev = changes.get()[it.id];
+  change(it.id, { rating });
+  try {
+    await api(`/items/${encodeURIComponent(it.id)}/rating`, { method: 'PUT', body: { rating } });
   } catch (e) {
     undo(it.id, prev);
     throw e;
