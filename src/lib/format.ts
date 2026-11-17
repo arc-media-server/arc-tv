@@ -20,6 +20,9 @@ export function audioCodecName(codec?: string, profile?: string): string {
   return audioCodecs[codec] ?? codec.toUpperCase();
 }
 
+/** "1 title", "4 titles". */
+export const countLabel = (n: number) => (n === 1 ? t('library.countOne') : t('library.count', { n }));
+
 export function channelsName(n?: number): string {
   if (!n) return '';
   if (n === 1) return t('player.mono');
