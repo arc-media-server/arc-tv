@@ -259,3 +259,6 @@ export function upcoming(q: PlayQueue | null) {
   const at = q.entries.findIndex((e) => e.id === q.current_entry_id);
   return at < 0 ? [] : q.entries.slice(at).filter((e) => e.available && e.item);
 }
+
+// Live updates: forget only the preference cache, without resetting player/queue state.
+export function invalidatePrefs() { prefsP = null; window.dispatchEvent(new CustomEvent('arc-prefs-invalidated')); }
