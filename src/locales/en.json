@@ -241,6 +241,7 @@
   "player.forward10": "Forward 10 seconds",
   "player.closePlayer": "Close player",
   "player.next": "Next: {{title}}",
+  "player.skipPreroll": "Skip",
   "player.skipIntro": "Skip Intro",
   "player.skipRecap": "Skip Recap",
   "player.skipCredits": "Skip Credits",
