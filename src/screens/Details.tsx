@@ -17,6 +17,8 @@ import { useActive, useNav } from '../lib/nav';
 import { queues, setSeasonPlayed, useChanges, withChanges } from '../lib/store';
 import { shuffled, usePlayAll } from '../lib/playAll';
 import { toast } from '../lib/toast';
+// Theme music
+import { useThemeMusic } from '../lib/themeMusic';
 
 // A title's page, as the Android app's DetailsScreen: the same summary as Home's over the title's
 // backdrop, then Play (or Resume), Shuffle for a show, and Plex's round Watched, Watchlist and ⋯
@@ -269,6 +271,7 @@ export function Details({ id, episodeId }: { id: string; episodeId?: string }) {
   }, [active, load]);
 
   const item = base ? withChanges(base, changes) : null;
+  useThemeMusic(id, base?.id === id ? base : null, active);
   const next = seasons ? nextEpisode(seasons) : undefined;
   // Play, Resume and Shuffle follow the order (seasons only); a tab opened on an episode can be
   // Not in This Order, when that's where the episode is.

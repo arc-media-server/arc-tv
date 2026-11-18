@@ -129,6 +129,8 @@ export interface Extra { id: string; title: string; kind: string; stream_url: st
 export interface CollectionRef { id: string; title: string; kind?: string; count?: number; images?: Images }
 
 export interface Item {
+  // Theme music
+  theme_url?: string;
   id: string;
   library_id?: number;
   kind: 'movie' | 'series' | 'episode' | string;
@@ -176,6 +178,8 @@ export interface RecentCard { type: 'series' | 'season' | 'episode' | string; it
 export interface HomeRowPref { id: string; hidden?: boolean; title?: string; filter?: Record<string, unknown>; style?: string; shows_only?: boolean; posters?: string }
 
 export interface Prefs {
+  // Theme music
+  theme_music?: boolean;
   home?: HomeRowPref[];
   split_up_next?: boolean;
   library_order?: number[];
