@@ -512,3 +512,6 @@ p { margin: 0 0 16px; }
 .tl-time { position: absolute; top: -52px; transform: translateX(-50%); font-size: 26px; font-weight: 600; }
 .ctl-times { display: flex; flex-direction: row; justify-content: space-between; margin-top: 10px; font-size: 24px; font-weight: 600; color: rgba(255, 255, 255, 0.8); }
 .popover-subtitle { padding-top: 18px; }
+
+/* Pre-roll: the existing player button, focused at the bottom right. */
+.preroll-skip { position: absolute; right: 96px; bottom: 96px; }
