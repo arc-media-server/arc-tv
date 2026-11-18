@@ -87,6 +87,8 @@ export function SettingsContent({ serverName, onSwitchServer, onSignOut, onReady
             <h2 className="settings-heading">{t('settings.playback')}</h2>
             <Row first label={t('settings.autoPlay')} value={onOff(p.auto_play !== false)} onClick={() => change({ auto_play: p.auto_play === false })} />
             <Row label={t('settings.autoSkip')} value={onOff(!!p.auto_skip)} onClick={() => change({ auto_skip: !p.auto_skip })} />
+            {/* Theme music */}
+            <Row label={t('settings.themeMusic')} value={onOff(p.theme_music !== false)} onClick={() => change({ theme_music: p.theme_music === false })} />
             {choiceRow(t('settings.audioLanguage'), audioChoices, p.audio_language ?? '', (v) => change({ audio_language: v }))}
           </section>
           <section data-section>

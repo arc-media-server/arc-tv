@@ -39,6 +39,7 @@
   "settings.fileDefault": "The file's default",
   "settings.playback": "Playback",
   "settings.autoPlay": "Auto-Play Next Episode",
+  "settings.themeMusic": "Theme Music",
   "settings.autoSkip": "Skip Intros Automatically",
   "settings.audioLanguage": "Preferred Audio Language",
   "settings.subtitles": "Subtitles",
