@@ -245,3 +245,9 @@ export interface Capabilities { features?: Record<string, { supported: boolean; 
 
 export interface PlayQueueEntry { id: string; available: boolean; item_id?: string; item?: Item }
 export interface PlayQueue { id: string; revision: number; current_entry_id: string; entries: PlayQueueEntry[] }
+
+// Pre-roll videos before films.
+export interface PrerollClip { title?: string; url: string }
+export function preroll(itemId: string, signal?: AbortSignal): Promise<PrerollClip[]> {
+  return api<PrerollClip[]>(`/items/${enc(itemId)}/preroll`, { signal, timeoutMs: 3000 });
+}

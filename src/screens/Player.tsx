@@ -1,7 +1,7 @@
 import { Spotlight } from '@enact/spotlight';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import platform from '@platform';
-import { api, apiOrNull, apiText, ApiError, enc, type Extra, type Item, type Playback, type Prefs, type SubtitleTrack, type Trickplay } from '../api';
+import { preroll, type PrerollClip, api, apiOrNull, apiText, ApiError, enc, type Extra, type Item, type Playback, type Prefs, type SubtitleTrack, type Trickplay } from '../api';
 import { Artwork, useArtwork } from '../components/Artwork';
 import { cardFor } from '../components/Cards';
 import { Icon } from '../components/Icon';
@@ -92,7 +92,69 @@ function methodLabel(p: Playback): [string, string] {
   return [t('method.convertingTitle'), body];
 }
 
-export function Player({ item: start, startMs, entryId, carryOn, fileId }: { item: Item; startMs: number; entryId?: string; carryOn?: boolean; fileId?: number }) {
+// Pre-roll: keep the film player unmounted until the clips finish, so they never report
+// film progress, start a conversion, or advance its queue. Replacements skip this gate.
+type PlayerProps = { item: Item; startMs: number; entryId?: string; carryOn?: boolean; fileId?: number; preroll?: boolean };
+export function Player(props: PlayerProps) {
+  const nav = useNav();
+  const enabled = props.preroll !== false && props.startMs <= 0 && props.item.kind === 'movie';
+  const [clips, setClips] = useState<PrerollClip[] | null>(enabled ? null : []);
+  const [index, setIndex] = useState(0);
+  useBack(() => { nav.back(); }, clips === null || index < clips.length);
+  useEffect(() => {
+    if (!enabled) return;
+    let live = true;
+    const ctrl = new AbortController();
+    // The deadline is independent of fetch cancellation (some older TVs finish it late).
+    const timer = window.setTimeout(() => {
+      if (!live) return;
+      live = false; ctrl.abort(); setClips([]);
+      console.warn('Arc: pre-roll list timed out; playing the film');
+    }, 3000);
+    preroll(props.item.id, ctrl.signal).then((list) => {
+      if (!live) return;
+      setClips(Array.isArray(list) ? list.filter((c) => c && typeof c.url === 'string' && c.url) : []);
+    }).catch(() => {
+      if (live) { setClips([]); console.warn('Arc: pre-roll list failed; playing the film'); }
+    }).finally(() => window.clearTimeout(timer));
+    return () => { live = false; window.clearTimeout(timer); ctrl.abort(); };
+  }, [enabled, props.item.id]);
+  const nextClip = useCallback(() => setIndex((n) => n + 1), []);
+  if (clips === null) return <div className="screen player"><div className="player-spinner"><div className="spinner" /></div></div>;
+  if (index < clips.length) return <Preroll key={index} clip={clips[index]} onDone={nextClip} />;
+  return <FilmPlayer {...props} />;
+}
+
+function Preroll({ clip, onDone }: { clip: PrerollClip; onDone: () => void }) {
+  const host = useRef<HTMLDivElement>(null);
+  const finish = useRef<() => void>(() => {});
+  useEffect(() => {
+    let finished = false;
+    const native = platform.createPlayer(host.current!);
+    const done = () => { if (!finished) { finished = true; onDone(); } };
+    finish.current = done;
+    native.on((event) => {
+      if (event === 'error') { console.warn('Arc: pre-roll failed; moving on'); done(); }
+      if (event === 'ended') done();
+    });
+    void api<{ url: string }>('/cast', { method: 'POST', body: { url: clip.url } }).then(async ({ url }) => {
+      if (finished) return;
+      await native.load(url, 0);
+      if (!finished) native.play();
+    }).catch(() => {
+      if (!finished) { console.warn('Arc: pre-roll failed; moving on'); done(); }
+    });
+    Spotlight.resume();
+    const focus = window.setTimeout(() => Spotlight.focus('preroll-skip'), 0);
+    return () => { finished = true; window.clearTimeout(focus); native.destroy(); };
+  }, [clip, onDone]);
+  return <div className="screen player">
+    <div ref={host} className="player-host" />
+    <Trap className="preroll-skip"><Button spotlightId="preroll-skip" data-default className="primary" onClick={() => finish.current()}>{t('player.skipPreroll')}</Button></Trap>
+  </div>;
+}
+
+function FilmPlayer({ item: start, startMs, entryId, carryOn, fileId }: PlayerProps) {
   const nav = useNav();
   const host = useRef<HTMLDivElement>(null);
   const player = useRef<NativePlayer | null>(null);
