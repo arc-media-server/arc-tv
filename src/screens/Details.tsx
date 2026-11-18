@@ -1,3 +1,5 @@
+import { useHideSpoilers } from '../lib/useSpoilers';
+import { spoilerSafeItem } from '../lib/spoilers';
 // Live updates
 import { useLiveRefresh } from '../lib/live-updates';
 import { liveTopics } from '../lib/live-hints';
@@ -270,12 +272,13 @@ export function Details({ id, episodeId }: { id: string; episodeId?: string }) {
     wasActive.current = active;
   }, [active, load]);
 
-  const item = base ? withChanges(base, changes) : null;
+  const hideSpoilers = useHideSpoilers();
+  const item = base ? spoilerSafeItem(withChanges(base, changes), hideSpoilers) : null;
   useThemeMusic(id, base?.id === id ? base : null, active);
   const next = seasons ? nextEpisode(seasons) : undefined;
   // Play, Resume and Shuffle follow the order (seasons only); a tab opened on an episode can be
   // Not in This Order, when that's where the episode is.
-  const tabs = seasons ? episodeTabs(seasons, unplaced) : [];
+  const tabs = seasons ? episodeTabs(seasons, unplaced).map((tab) => ({ ...tab, episodes: tab.episodes.map((ep) => spoilerSafeItem(withChanges(ep, changes), hideSpoilers, base)) })) : [];
   const focusEp = episodeId ? tabs.reduce<Item | undefined>((f, x) => f ?? x.episodes.find((e) => e.id === episodeId), undefined) : undefined;
   const land = focusEp ?? next;
   const initialSeason = land ? Math.max(0, tabs.findIndex((x) => x.episodes.some((e) => e.id === land.id))) : 0;

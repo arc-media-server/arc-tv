@@ -38,6 +38,8 @@
   "settings.none": "None",
   "settings.fileDefault": "The file's default",
   "settings.playback": "Playback",
+  "settings.hideSpoilers": "Hide Spoilers",
+  "settings.saveFailed": "Couldn't save this setting. Try again.",
   "settings.autoPlay": "Auto-Play Next Episode",
   "settings.themeMusic": "Theme Music",
   "settings.autoSkip": "Skip Intros Automatically",
