@@ -1,3 +1,5 @@
+import { useHideSpoilers } from '../lib/useSpoilers';
+import { spoilerSafeItem } from '../lib/spoilers';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Item, Library, Prefs } from '../api';
 import { backdropOf, HeroBackdrop, RoundButton, TitleLogo } from '../components/Backdrop';
@@ -124,7 +126,8 @@ export function HomeContent({ prefs, libraries, visits, onReady }: { prefs: Pref
     else nav.open(card.item);
   };
 
-  const heroItem = hero?.item;
+  const hideSpoilers = useHideSpoilers();
+  const heroItem = hero?.item ? spoilerSafeItem(hero.item, hideSpoilers) : undefined;
   const heroResume = heroItem ? resumeMs(heroItem) : 0;
   const heroPlayable = heroItem && (heroItem.kind === 'movie' || heroItem.kind === 'episode');
   const heroCode = heroItem?.kind === 'episode' ? episodeCode(heroItem) : '';

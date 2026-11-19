@@ -1,3 +1,4 @@
+import { useSpoilerItem } from '../lib/useSpoilers';
 import { createContext, useContext, useRef, type ReactNode } from 'react';
 import type { Extra, Item } from '../api';
 import { formatRuntime, t, tMaybe } from '../i18n';
@@ -127,8 +128,10 @@ export function MediaCard({ card, look = 'poster', seasonPoster, caption = true,
   const changes = useChanges();
   const menu = useContext(CardMenuContext);
   const inContinue = useContext(ContinueRowContext);
-  const item = withChanges(card.item, changes);
-  const shown: Card = item === card.item ? card : { ...card, item, progress: cardFor(item).progress };
+  const original = withChanges(card.item, changes);
+  const item = useSpoilerItem(original);
+  const shown: Card = item === original ? (item === card.item ? card : { ...card, item, progress: cardFor(item).progress })
+    : { ...card, ...cardFor(item), item, mosaic: undefined };
   const thumb = look === 'thumb';
   const art = thumb ? shown.thumb : seasonPoster ? shown.seasonPoster ?? shown.poster : shown.poster;
   const sub = caption ? cardSubtitle(shown, thumb) : '';

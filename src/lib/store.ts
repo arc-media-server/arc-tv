@@ -133,7 +133,7 @@ let prefsP: Promise<Prefs> | null = null;
 let capsP: Promise<Capabilities> | null = null;
 
 export function prefs(): Promise<Prefs> {
-  prefsP ??= api<Prefs>('/me/prefs').catch(() => { prefsP = null; return {} as Prefs; });
+  prefsP ??= api<Prefs>('/me/prefs').catch(() => { prefsP = null; return { hide_spoilers: true } as Prefs; });
   return prefsP;
 }
 
@@ -262,3 +262,11 @@ export function upcoming(q: PlayQueue | null) {
 
 // Live updates: forget only the preference cache, without resetting player/queue state.
 export function invalidatePrefs() { prefsP = null; window.dispatchEvent(new CustomEvent('arc-prefs-invalidated')); }
+
+/** Save this profile choice with explicit failure feedback in Settings. */
+export async function setHideSpoilers(hide: boolean): Promise<Prefs> {
+  const all = await api<Prefs>('/me/prefs', { method: 'PATCH', body: { hide_spoilers: hide } });
+  prefsP = Promise.resolve(all);
+  window.dispatchEvent(new CustomEvent('arc-prefs-changed'));
+  return all;
+}
