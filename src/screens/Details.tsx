@@ -58,8 +58,8 @@ function EpisodeCard({ ep, first, unplaced, onPlay }: { ep: Item; first: boolean
     : '';
   const sub = [length, ep.available === false ? t('details.missing') : ''].filter(Boolean).join(' · ');
   return (
-    <div className="card card-thumb episode-card">
-      <Pressable className="card-face" onClick={onPlay} onHold={menu ? (el) => menu(ep, el) : undefined} data-default={first || undefined}>
+    <div className={`card card-thumb episode-card${ep.available === false ? ' missing' : ''}`}>
+      <Pressable className="card-face" onClick={() => { if (ep.available !== false) onPlay(); }} onHold={menu && ep.available !== false ? (el) => menu(ep, el) : undefined} data-default={first || undefined}>
         <Artwork path={card.thumb} label={ep.title} className="ratio-16x9" />
         <WatchBadge item={ep} />
         <ProgressLine progress={card.progress} />
@@ -122,7 +122,7 @@ function episodeTabs(seasons: Season[], unplaced: Item[]): EpisodeTab[] {
  * the tabs, as on the web's show page: Shuffle Season and Mark Season as Watched (or Unwatched),
  * for a season shown; Not in This Order isn't a season, so it has no season actions.
  */
-function Seasons({ seriesId, tabs, orderName, initial, focusId, canQueue, onPlay, onSeasonMarked }: {
+function Seasons({ seriesId, tabs, orderName, initial, focusId, canQueue, showMissing, onToggleMissing, onPlay, onSeasonMarked }: {
   seriesId: string;
   tabs: EpisodeTab[];
   orderName?: string;
@@ -131,11 +131,17 @@ function Seasons({ seriesId, tabs, orderName, initial, focusId, canQueue, onPlay
   canQueue: boolean;
   onPlay: (ep: Item) => void;
   onSeasonMarked: () => void;
+  showMissing: boolean;
+  onToggleMissing: () => void;
 }) {
-  const [selected, setSelected] = useState(initial);
+  const [selectedKey, setSelectedKey] = useState(tabs[initial]?.key);
+  const selected = Math.max(0, tabs.findIndex((x) => x.key === selectedKey));
   const changes = useChanges();
   const playAll = usePlayAll(t('details.seasonPlayFailed'));
-  if (!tabs.length) return <p className="muted" style={{ paddingLeft: PAGE_START }}>{t('details.noEpisodes')}</p>;
+  if (!tabs.length) return <section style={{ paddingLeft: PAGE_START }}>
+    <p className="muted">{t('details.noEpisodes')}</p>
+    <Button className="small" onClick={onToggleMissing}>{t(showMissing ? 'details.hideMissing' : 'details.showMissing')}</Button>
+  </section>;
   const tab = tabs[Math.min(selected, tabs.length - 1)];
   const episodes = tab.episodes.map((e) => withChanges(e, changes));
   const onDisk = tab.unplaced ? [] : episodes.filter((e) => e.available !== false);
@@ -150,21 +156,20 @@ function Seasons({ seriesId, tabs, orderName, initial, focusId, canQueue, onPlay
       <div className="season-bar" style={{ marginLeft: PAGE_START - 16 }}>
         <Container className="tabs">
           {tabs.map((x, i) => (
-            <Focusable key={x.key} className={`tab${i === selected ? ' selected' : ''}`} onFocus={() => setSelected(i)} onClick={() => setSelected(i)}>
+            <Focusable key={x.key} className={`tab${i === selected ? ' selected' : ''}`} onFocus={() => setSelectedKey(x.key)} onClick={() => setSelectedKey(x.key)}>
               {x.name}
             </Focusable>
           ))}
         </Container>
-        {onDisk.length > 0 && (
-          <Container className="head-buttons season-actions">
+        <Container className="head-buttons season-actions">
+            <Button className="small" onClick={onToggleMissing}>{t(showMissing ? 'details.hideMissing' : 'details.showMissing')}</Button>
             {canQueue && onDisk.length > 1 && (
               <Button className="small" onClick={shuffleSeason}><Icon name="shuffle" size={26} /> {t('details.shuffleSeason')}</Button>
             )}
-            <Button className="small" onClick={markSeason}>
+            {onDisk.length > 0 && <Button className="small" onClick={markSeason}>
               <Icon name={seasonWatched ? 'circleCheck' : 'check'} size={26} /> {t(seasonWatched ? 'details.seasonUnwatched' : 'details.seasonWatched')}
-            </Button>
+            </Button>}
           </Container>
-        )}
       </div>
       {tab.unplaced && (
         <p className="muted unplaced-note" style={{ paddingLeft: PAGE_START }}>
@@ -181,7 +186,7 @@ function Seasons({ seriesId, tabs, orderName, initial, focusId, canQueue, onPlay
 function EpisodeStrip({ episodes, unplaced, focusId, onPlay }: { episodes: Item[]; unplaced: boolean; focusId?: string; onPlay: (ep: Item) => void }) {
   return (
     <Strip start={PAGE_START}>
-      {episodes.map((ep) => <EpisodeCard key={ep.id} ep={ep} first={ep.id === focusId} unplaced={unplaced} onPlay={() => onPlay(ep)} />)}
+      {episodes.map((ep) => <EpisodeCard key={ep.id || `missing:${ep.season_number}:${ep.episode_number}`} ep={ep} first={ep.id === focusId} unplaced={unplaced} onPlay={() => onPlay(ep)} />)}
     </Strip>
   );
 }
@@ -227,6 +232,9 @@ export function Details({ id, episodeId }: { id: string; episodeId?: string }) {
   const [base, setBase] = useState<Item | null>(null);
   const [seasons, setSeasons] = useState<Season[] | null>(null);
   const [unplaced, setUnplaced] = useState<Item[]>([]);
+  const [showMissing, setShowMissing] = useState(false);
+  const missingChoice = useRef(false);
+  const seasonsRequest = useRef(0);
   const [orderName, setOrderName] = useState<string | undefined>(undefined);
   const [related, setRelated] = useState<Related[]>([]);
   const [error, setError] = useState('');
@@ -236,14 +244,26 @@ export function Details({ id, episodeId }: { id: string; episodeId?: string }) {
   const changes = useChanges();
   const canQueue = useCanQueue();
 
+  const loadSeasons = useCallback(async (missing: boolean) => {
+    const request = ++seasonsRequest.current;
+    const s = await api<SeasonsResponse>(`/series/${encodeURIComponent(id)}/seasons${missing ? '?missing=1' : ''}`);
+    if (request !== seasonsRequest.current) return;
+    missingChoice.current = missing;
+    setShowMissing(missing);
+    setSeasons((s.seasons ?? []).filter((x) => x.episodes && x.episodes.length));
+    setUnplaced(s.unplaced ?? []);
+    setOrderName(s.ordering?.name || undefined);
+  }, [id]);
+  useEffect(() => () => { ++seasonsRequest.current; }, [id]);
+  const toggleMissing = () => {
+    void loadSeasons(!missingChoice.current).catch(() => toast(t('details.episodesFailed')));
+  };
+
   const load = useCallback((quiet: boolean) => {
     if (!quiet) setError('');
     api<Item>(`/items/${encodeURIComponent(id)}`).then(async (it) => {
       if (it.kind === 'series') {
-        const s = await api<SeasonsResponse>(`/series/${encodeURIComponent(id)}/seasons`);
-        setSeasons((s.seasons ?? []).filter((x) => x.episodes && x.episodes.length));
-        setUnplaced(s.unplaced ?? []);
-        setOrderName(s.ordering?.name || undefined);
+        await loadSeasons(missingChoice.current);
       }
       setBase(it);
       if (it.kind === 'episode') return;
@@ -257,7 +277,7 @@ export function Details({ id, episodeId }: { id: string; episodeId?: string }) {
       ]);
       setRelated(rows.filter((r): r is Related => !!r && r.items.length > 0));
     }).catch((e) => { if (!quiet) setError((e as Error).message); });
-  }, [id]);
+  }, [id, loadSeasons]);
 
   useEffect(() => { load(false); }, [load]);
   // Live updates: preserve the title and focused menu while hints arrive.
@@ -361,14 +381,16 @@ export function Details({ id, episodeId }: { id: string; episodeId?: string }) {
         </section>
         {series && seasons && (
           <Seasons
-            key={initialSeason}
+            key={id}
             seriesId={item.id}
             tabs={tabs}
             orderName={orderName}
             initial={initialSeason}
             focusId={focusEp?.id}
             canQueue={canQueue}
-            onPlay={(ep) => nav.play(ep, resumeMs(ep))}
+            showMissing={showMissing}
+            onToggleMissing={toggleMissing}
+            onPlay={(ep) => { if (ep.available !== false) nav.play(ep, resumeMs(ep)); }}
             onSeasonMarked={() => load(true)}
           />
         )}
