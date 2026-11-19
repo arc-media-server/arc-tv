@@ -1,3 +1,4 @@
+import { toast } from '../lib/toast';
 // Live updates
 import { useLiveRefresh } from '../lib/live-updates';
 import { liveTopics } from '../lib/live-hints';
@@ -9,7 +10,7 @@ import { Scroller } from '../components/Scroller';
 import { Container, Focusable } from '../components/spot';
 import { t } from '../i18n';
 import { languageName } from '../lib/format';
-import { prefs as loadPrefs, savePrefs } from '../lib/store';
+import { prefs as loadPrefs, savePrefs, setHideSpoilers } from '../lib/store';
 import { START } from './Home';
 
 // The profile's playback and subtitle choices (the same ones as the web's Settings, saved to the
@@ -87,6 +88,7 @@ export function SettingsContent({ serverName, onSwitchServer, onSignOut, onReady
             <h2 className="settings-heading">{t('settings.playback')}</h2>
             <Row first label={t('settings.autoPlay')} value={onOff(p.auto_play !== false)} onClick={() => change({ auto_play: p.auto_play === false })} />
             <Row label={t('settings.autoSkip')} value={onOff(!!p.auto_skip)} onClick={() => change({ auto_skip: !p.auto_skip })} />
+            <Row label={t('settings.hideSpoilers')} value={onOff(!!p.hide_spoilers)} onClick={() => { void setHideSpoilers(!p.hide_spoilers).then(setP, () => { console.warn('Arc: could not save spoiler preference'); toast(t('settings.saveFailed')); }); }} />
             {/* Theme music */}
             <Row label={t('settings.themeMusic')} value={onOff(p.theme_music !== false)} onClick={() => change({ theme_music: p.theme_music === false })} />
             {choiceRow(t('settings.audioLanguage'), audioChoices, p.audio_language ?? '', (v) => change({ audio_language: v }))}

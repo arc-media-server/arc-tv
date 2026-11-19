@@ -1,3 +1,4 @@
+import { useSpoilerItem } from '../lib/useSpoilers';
 import { Spotlight } from '@enact/spotlight';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import platform from '@platform';
@@ -827,12 +828,13 @@ function PlayerMenu({ menu, plan, subtitle, quality, speed, chapterAt, caps, onC
 }
 
 /** The web's Up Next card, at the bottom right: the countdown, the next episode, Play Now (focused) and Cancel. */
-function UpNext({ next, seconds, onPlay, onCancel }: { next: Item; seconds: number; onPlay: () => void; onCancel: () => void }) {
+function UpNext({ next: original, seconds, onPlay, onCancel }: { next: Item; seconds: number; onPlay: () => void; onCancel: () => void }) {
   useEffect(() => {
     Spotlight.resume();
     const timer = window.setTimeout(() => Spotlight.focus('up-next'), 0);
     return () => window.clearTimeout(timer);
   }, []);
+  const next = useSpoilerItem(original);
   const card = cardFor(next);
   return (
     <Trap spotlightId="up-next" className="up-next">

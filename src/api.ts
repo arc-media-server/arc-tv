@@ -178,6 +178,7 @@ export interface RecentCard { type: 'series' | 'season' | 'episode' | string; it
 export interface HomeRowPref { id: string; hidden?: boolean; title?: string; filter?: Record<string, unknown>; style?: string; shows_only?: boolean; posters?: string }
 
 export interface Prefs {
+  hide_spoilers?: boolean;
   // Theme music
   theme_music?: boolean;
   home?: HomeRowPref[];

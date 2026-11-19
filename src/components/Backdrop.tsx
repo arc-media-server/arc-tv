@@ -1,3 +1,4 @@
+import { useSpoilerItem } from '../lib/useSpoilers';
 import { useEffect, useState } from 'react';
 import { apiOrNull, type Item, type Palette } from '../api';
 import { useArtwork } from './Artwork';
@@ -77,7 +78,8 @@ function Art({ path }: { path: string }) {
 }
 
 /** The backdrop and wash for `item`; changes wait a moment so moving quickly along a row stays smooth. */
-export function ImmersiveBackdrop({ item, delay = 250 }: { item: Item | null | undefined; delay?: number }) {
+export function ImmersiveBackdrop({ item: original, delay = 250 }: { item: Item | null | undefined; delay?: number }) {
+  const item = useSpoilerItem(original);
   const [shown, setShown] = useState<{ art?: string; colors: string[] | null }>({ colors: null });
   useEffect(() => {
     if (!item) return;
@@ -94,7 +96,7 @@ export function ImmersiveBackdrop({ item, delay = 250 }: { item: Item | null | u
     <div className="immersive">
       {washes.map((w) => <div key={w.k} className="wash fade-in" style={w.v ? washStyle(w.v) : undefined} />)}
       <div className="backdrop-frame">
-        {arts.map((a) => (a.v ? <Art key={a.k} path={a.v} /> : null))}
+        {item && item !== original ? (backdropOf(item) ? <Art key={backdropOf(item)} path={backdropOf(item)!} /> : null) : arts.map((a) => (a.v ? <Art key={a.k} path={a.v} /> : null))}
       </div>
     </div>
   );
@@ -113,7 +115,8 @@ export function TitleLogo({ item }: { item: Item }) {
  * A title's logo (or name), one line of details and three lines of its description: the same on
  * Home and on the title's page, at the same place, so moving between them doesn't jump.
  */
-export function TitleSummary({ item, meta, labels }: { item: Item; meta: string[]; labels?: string[] }) {
+export function TitleSummary({ item: original, meta, labels }: { item: Item; meta: string[]; labels?: string[] }) {
+  const item = useSpoilerItem(original);
   const line = meta.filter(Boolean).join('  ·  ');
   return (
     <div className="summary">
@@ -126,7 +129,8 @@ export function TitleSummary({ item, meta, labels }: { item: Item; meta: string[
 }
 
 /** The full-screen artwork behind the page, dimmed once the page scrolls past the top. */
-export function HeroBackdrop({ item, dim }: { item: Item; dim: boolean }) {
+export function HeroBackdrop({ item: original, dim }: { item: Item; dim: boolean }) {
+  const item = useSpoilerItem(original);
   const art = useArtwork(backdropOf(item));
   return (
     <div className="hero-backdrop">
