@@ -515,3 +515,6 @@ p { margin: 0 0 16px; }
 
 /* Pre-roll: the existing player button, focused at the bottom right. */
 .preroll-skip { position: absolute; right: 96px; bottom: 96px; }
+
+/* Provider-only episodes stay focusable for reading, with the existing card layout. */
+.episode-card.missing .artwork { opacity: 0.45; }
