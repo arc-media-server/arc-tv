@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import platform from '@platform';
 import { checkAddress, scan, type FoundServer } from '../discovery';
+import { ArcLogo } from '../components/ArcLogo';
 import { t } from '../i18n';
 import { Button, Container, SpotInput } from '../components/spot';
 
@@ -38,6 +39,7 @@ export function ServerPick({ onPick }: { onPick: (s: FoundServer) => void }) {
 
   return (
     <div className="screen centered">
+      <ArcLogo kind="stacked" className="screen-logo" />
       <h1>{t('server.title')}</h1>
       <Container className="stack">
         {found.map((s) => (

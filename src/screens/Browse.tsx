@@ -1,6 +1,7 @@
 import { Spotlight } from '@enact/spotlight';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { api, type Library, type Prefs, type Profile } from '../api';
+import { ArcLogo, Splash } from '../components/ArcLogo';
 import { Icon } from '../components/Icon';
 import { Container, EntryContainer, Focusable } from '../components/spot';
 import { t } from '../i18n';
@@ -27,21 +28,6 @@ import { liveTopics } from '../lib/live-hints';
 export type Section = { kind: 'home' } | { kind: 'search' } | { kind: 'watchlist' } | { kind: 'playlists' } | { kind: 'together' } | { kind: 'settings' } | { kind: 'library'; id: number; genre?: string; fromSearch?: boolean };
 
 const same = (a: Section, b: Section) => a.kind === b.kind && (a.kind !== 'library' || a.id === (b as { id: number }).id);
-
-export function ArcLogo({ size = 56 }: { size?: number }) {
-  return (
-    <svg viewBox="0 0 32 32" width={size} height={size} aria-hidden="true">
-      <defs>
-        <linearGradient id="arc-logo" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#7fdccd" />
-          <stop offset="1" stopColor="#0b7d72" />
-        </linearGradient>
-      </defs>
-      <path d="M5 24a11 11 0 0 1 22 0" fill="none" stroke="url(#arc-logo)" strokeWidth="4.5" strokeLinecap="round" />
-      <circle cx="16" cy="24" r="2.6" fill="url(#arc-logo)" />
-    </svg>
-  );
-}
 
 export function Avatar({ profile, size = 44 }: { profile: Profile; size?: number }) {
   return (
@@ -148,7 +134,7 @@ export function Browse({ profile, canSwitchProfile, serverName, onSwitchProfile,
       </div>
     );
   }
-  if (!frame || !prefs) return <div className="screen centered"><p className="muted">{t('common.loading')}</p></div>;
+  if (!frame || !prefs) return <Splash line={t('common.loading')} />;
 
   const watchlist = <SidebarItem key="watchlist" icon={<Icon name="bookmark" />} label={t('nav.watchlist')} selected={section.kind === 'watchlist'} onClick={() => show({ kind: 'watchlist' })} />;
   const items: ReactNode[] = [];
@@ -175,7 +161,12 @@ export function Browse({ profile, canSwitchProfile, serverName, onSwitchProfile,
         onFocus={() => setOpen(true)}
         onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setOpen(false); }}
       >
-        {/* As the Apple TV app: who's watching (and the time) at the top, then the sections. */}
+        {/* Arc's mark at the top (the main logo once the rail opens), as the web's sidebar; then, as
+            the Apple TV app, who's watching (and the time) and the sections. */}
+        <div className="side-logo">
+          <ArcLogo kind="mark" decorative />
+          <ArcLogo kind="logo" />
+        </div>
         {profile && canSwitchProfile && (
           <SidebarItem icon={<Avatar profile={profile} size={36} />} label={profile.name} extra={<Clock />} selected={false} onClick={onSwitchProfile} />
         )}

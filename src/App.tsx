@@ -3,6 +3,7 @@ import { SpotlightRootDecorator } from '@enact/spotlight/SpotlightRootDecorator'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import platform from '@platform';
 import { api, ApiError, enc, type AuthStatus, type Extra, type Item, type Profile } from './api';
+import { Splash } from './components/ArcLogo';
 import { CardMenuHost } from './components/TitleMenu';
 import { Container, focusElement } from './components/spot';
 import type { FoundServer } from './discovery';
@@ -194,7 +195,7 @@ function App() {
   const render = (s: Screen) => {
     switch (s.name) {
       case 'starting':
-        return <div className="screen centered"><p className="muted">{t('common.loading')}</p></div>;
+        return <Splash line={t('common.loading')} />;
       case 'servers':
         return <ServerPick onPick={pickServer} />;
       case 'signin':

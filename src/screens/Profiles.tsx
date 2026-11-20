@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api, ApiError, type AuthStatus, type Profile } from '../api';
+import { ArcLogo } from '../components/ArcLogo';
 import { t } from '../i18n';
 import { Button, Container, Focusable } from '../components/spot';
 
@@ -59,6 +60,7 @@ export function Profiles({ onChosen, onSignOut }: { onChosen: (p: Profile) => vo
 
   return (
     <div className="screen centered">
+      <ArcLogo className="profiles-logo" />
       <h1>{t('profiles.title')}</h1>
       <Container className="profiles">
         {profiles.map((p, i) => (
