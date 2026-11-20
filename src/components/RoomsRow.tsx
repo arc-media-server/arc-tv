@@ -35,15 +35,15 @@ function roomCard(e: RoomEntry): Card {
 }
 
 /** The room cards on a strip, each opening its menu. */
-export function RoomCards({ rooms, start, width }: { rooms: RoomEntry[]; start: number; width: number }) {
+export function RoomCards({ rooms, start, width, first }: { rooms: RoomEntry[]; start: number; width: number; first?: boolean }) {
   const [open, setOpen] = useState<{ room: ListedRoom; from?: ClientRect } | null>(null);
   return (
     // Holding OK on a room card has no title menu: the room's own menu is OK.
     <CardMenuContext.Provider value={null}>
       <Container className="row-cards">
         <Strip start={start}>
-          {rooms.map((e) => (
-            <MediaCard key={e.room.id} card={roomCard(e)} look="thumb" width={width} onClick={() => setOpen({ room: e.room })} />
+          {rooms.map((e, i) => (
+            <MediaCard key={e.room.id} card={roomCard(e)} look="thumb" width={width} first={first && i === 0} onClick={() => setOpen({ room: e.room })} />
           ))}
         </Strip>
       </Container>
