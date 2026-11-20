@@ -71,7 +71,7 @@ function EpisodeCard({ ep, first, unplaced, onPlay }: { ep: Item; first: boolean
 }
 
 /**
- * The description beside the buttons: three lines, and when that cuts it short, focusable with
+ * The description under the logo, above the buttons: three lines, and when that cuts it short, focusable with
  * MORE at its end to open the whole text, as the Apple TV app.
  */
 function About({ item, meta }: { item: Item; meta: string }) {
@@ -340,13 +340,14 @@ export function Details({ id, episodeId }: { id: string; episodeId?: string }) {
     <div className="screen details" ref={root}>
       <HeroBackdrop item={item} dim={scrolled} />
       <Scroller className="details-page" pad={72} onMove={(o) => setScrolled(o > 40)}>
-        {/* As the Apple TV app: the artwork fills the screen, the logo sits low on it, and the
-            buttons and description share a line beneath; the rest scrolls up over a dimmed copy. */}
+        {/* As Android and the Apple TV app: the artwork fills the screen with everything low on
+            it (the logo, the description and details, then the buttons); the rest scrolls up over
+            a dimmed copy. */}
         <section className="details-hero" data-section>
           <TitleLogo item={item} />
           {item.kind === 'episode' && <div className="hero-episode">{[episodeCode(item), item.title].filter(Boolean).join(' · ')}</div>}
-          <div className="hero-row">
-            <div className="hero-actions">
+          <About item={item} meta={meta.filter(Boolean).join(' · ')} />
+          <div className="hero-actions">
               <Container className="actions">
                 {target && (
                   <Button className="primary" data-default={!focusEp || undefined} onClick={() => nav.play(target, resume)}>
@@ -371,8 +372,6 @@ export function Details({ id, episodeId }: { id: string; episodeId?: string }) {
                 <RoundButton icon="more" label={t('action.more')} onClick={() => setPanel('more')} onLabel={setLabel} />
               </Container>
               <div className="action-label">{label}</div>
-            </div>
-            <About item={item} meta={meta.filter(Boolean).join(' · ')} />
           </div>
         </section>
         {series && seasons && (
