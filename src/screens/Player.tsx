@@ -1084,15 +1084,20 @@ function PlayerMenu({ menu, plan, subtitle, subtitleOffset, quality, speed, chap
  * Subtitle Timing: where the lines are now, then Show 0.5s Earlier, Show 0.5s Later and Reset. Each
  * press shows at once and the menu stays open, so a line can be matched by eye. The choices stay
  * put (the focus mustn't lose its row): at ±10s, or at 0.0s for Reset, they're dimmed and do
- * nothing. It opens over the Subtitles button, and Back returns the focus there.
+ * nothing. Back returns the focus to the Subtitles button.
  */
 function TimingMenu({ offset, onShift, onClose }: { offset: number; onShift: (delta: number | null) => void; onClose: () => void }) {
-  const [from] = useState(() => document.querySelector('[data-spotlight-id="player-subtitles"]')?.getBoundingClientRect());
+  // At the top of the screen, right edge level with the Subtitles button: over the button it would
+  // cover the very lines being matched (they sit just above the controls).
+  const [from] = useState(() => {
+    const r = document.querySelector('[data-spotlight-id="player-subtitles"]')?.getBoundingClientRect();
+    return r ? ({ left: r.left, right: r.right, width: r.width, top: 0, bottom: 20, height: 20 } as ClientRect) : undefined;
+  });
   const way = timingWay(offset);
   const seconds = timingSeconds(offset);
   const body = way === 'later' ? t('player.timingLater', { seconds }) : way === 'earlier' ? t('player.timingEarlier', { seconds }) : t('player.timingZero');
   return (
-    <Popover place="above" shade={false} from={from} title={t('player.timingTitle')} body={body} onClose={onClose}>
+    <Popover place="below" shade={false} from={from} title={t('player.timingTitle')} body={body} onClose={onClose}>
       <PopoverItem first icon="" label={t('player.timingShowEarlier')} dim={offset <= -MAX_MS} onClick={() => onShift(-STEP_MS)} />
       <PopoverItem icon="" label={t('player.timingShowLater')} dim={offset >= MAX_MS} onClick={() => onShift(STEP_MS)} />
       <PopoverItem icon="" label={t('player.timingReset')} dim={offset === 0} onClick={() => onShift(null)} />
