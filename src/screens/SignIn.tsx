@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import platform from '@platform';
 import { api, ApiError } from '../api';
+import { ArcLogo } from '../components/ArcLogo';
 import { t } from '../i18n';
 import { Button, Container } from '../components/spot';
 
@@ -54,6 +55,7 @@ export function SignIn({ serverName, serverURL, onToken, onOtherServer }: {
   const linkURL = `${(serverURL || location.origin).replace(/^https?:\/\//, '')}/link`;
   return (
     <div className="screen centered">
+      <ArcLogo kind="stacked" className="screen-logo" />
       <h1>{t('link.title', { server: serverName })}</h1>
       <p className="lead">{t('link.steps')}</p>
       {!expired && code && <div className="link-code">{code}</div>}

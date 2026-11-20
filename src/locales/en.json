@@ -1,5 +1,6 @@
 {
   "app.name": "Arc",
+  "app.logo": "Arc Media Server",
   "common.back": "Back",
   "common.retry": "Try Again",
   "common.cancel": "Cancel",
