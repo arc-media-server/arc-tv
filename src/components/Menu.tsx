@@ -147,9 +147,10 @@ export function Popover({ title, body, place = 'side', shade = true, from, onClo
 
 const POPOVER_WIDTH = 560;
 
-export function PopoverItem({ icon, label, detail, onClick, first }: { icon: string; label: string; detail?: string; onClick: () => void; first?: boolean }) {
+/** `dim`: shown but not a choice (someone who can't watch the title): it still takes the focus, so it can be read, and does nothing. */
+export function PopoverItem({ icon, label, detail, onClick, first, dim }: { icon: string; label: string; detail?: string; onClick: () => void; first?: boolean; dim?: boolean }) {
   return (
-    <Focusable className={`popover-item${detail ? ' with-detail' : ''}`} onClick={onClick} data-default={first || undefined}>
+    <Focusable className={`popover-item${detail ? ' with-detail' : ''}${dim ? ' dim' : ''}`} onClick={dim ? undefined : onClick} aria-disabled={dim || undefined} data-default={first || undefined}>
       <span className="popover-text">
         <span className="popover-label">{label}</span>
         {detail && <span className="popover-detail">{detail}</span>}

@@ -138,7 +138,7 @@ export function RoomCard({ room, lobby, onStart, onLeave, onEnd, onClose, extra 
           {!lobby && <Button data-default onClick={onClose}>{t('common.close')}</Button>}
           {extra}
           {shownCode && <Button onClick={() => void renewWithNote()}>{t('together.newCode')}</Button>}
-          <Button data-default={lobby && !host ? true : undefined} onClick={onLeave}>{t('together.leave')}</Button>
+          <Button className="room-leave" data-default={lobby && !host ? true : undefined} onClick={onLeave}>{t('together.leave')}</Button>
           {!lobby && host && <Button onClick={onEnd}>{t('together.endForEveryone')}</Button>}
         </Container>
       </Trap>
