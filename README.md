@@ -41,9 +41,11 @@ src/platform/
   tizen.ts            Samsung: AVPlay player, Back key 10009, media keys, webapis
   browser.ts          desktop Chrome stand-in with hls.js, for quick UI work
 src/locales/en.json   all UI text (through t())
+src/assets/brand/     Arc's logo SVGs, copied unchanged from arc-media-server docs/brand
 platforms/webos/      appinfo.json, icons, splash  -> npm run package:webos -> .ipk
 platforms/tizen/      config.xml, icon             -> npm run package:tizen -> .wgt
-scripts/              packaging and the bundle check
+scripts/              packaging, the bundle check, make-logos.mjs (the icons and splash from
+                      src/assets/brand, drawn by Playwright's Chromium)
 ```
 
 The build picks the platform file at compile time (`vite build --mode webos|tizen|browser`), so

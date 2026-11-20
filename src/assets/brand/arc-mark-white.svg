@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round">
+  <title>Arc</title>
+  <!-- The TV on little feet, with Arc's original arc and dot inside. White on transparent. -->
+  <rect x="5" y="10" width="38" height="24" rx="5" stroke-width="3.2"/>
+  <path d="M13,34l-2,5M35,34l2,5" stroke-width="3.2"/>
+  <path d="M17.2,25.6a6.8,6.8 0 0 1 13.6,0" stroke-width="2.8"/>
+  <circle cx="24" cy="25.6" r="1.6" fill="#fff" stroke="none"/>
+</svg>
