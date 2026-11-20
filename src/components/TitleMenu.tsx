@@ -6,7 +6,8 @@ import {
 } from '../lib/format';
 import { canUse, queue, queues, removeFromContinue, setPlayed, setWatchlist, useChanges, withChanges } from '../lib/store';
 import { toast } from '../lib/toast';
-import { roomTitle, startRoom, useCanTogether } from '../lib/together';
+import { roomTitle, useCanTogether } from '../lib/together';
+import { InvitePicker } from './InvitePicker';
 import { CardMenuContext, type CardPlace } from './Cards';
 import { Overlay, Popover, PopoverItem } from './Menu';
 import { Scroller, type ScrollerHandle } from './Scroller';
@@ -45,16 +46,18 @@ export async function addToQueue(it: Item, next: boolean) {
 }
 
 /**
- * Watch Together from a title's menu: a room with a code, from the profile's resume point; a show
- * starts on the episode its Play would (Android's ⋯ → Watch Together). App opens the lobby.
+ * Watch Together from a title's menu: what the room would start on (a film or episode from the
+ * profile's resume point; a show, the episode its Play would), then Invite People…, as Android's
+ * ⋯ → Watch Together. Null when there's nothing to watch or it didn't resolve (with a note).
  */
-async function watchTogether(it: Item) {
+async function togetherTarget(it: Item): Promise<{ item: Item; startMs: number } | null> {
   try {
     const target = await roomTitle(it);
-    if (!target) { toast(t('together.noEpisode')); return; }
-    if (!(await startRoom(target.item, target.startMs))) toast(t('together.startFailed'));
+    if (!target) toast(t('together.noEpisode'));
+    return target;
   } catch {
     toast(t('together.startFailed'));
+    return null;
   }
 }
 
@@ -158,7 +161,9 @@ export function MoreMenu({ item, onMediaInfo, onPlayVersion, onClose, inContinue
   // Where the ⋯ or card is, so Add to Playlist's list opens where this menu did.
   const [opener] = useState(() => (Spotlight.getCurrent() as HTMLElement | null)?.getBoundingClientRect());
   const [picking, setPicking] = useState(false);
+  const [inviting, setInviting] = useState<{ item: Item; startMs: number } | null>(null);
   if (picking) return <PlaylistPicker item={item} from={opener} onClose={onClose} />;
+  if (inviting) return <InvitePicker item={inviting.item} startMs={inviting.startMs} from={opener} onClose={onClose} />;
   if (ratingOpen) return <StarRating item={item} onClose={onClose} />;
   return (
     <Popover title={item.title} onClose={onClose}>
@@ -171,7 +176,7 @@ export function MoreMenu({ item, onMediaInfo, onPlayVersion, onClose, inContinue
         </>
       )}
       {queueable(item) && <PopoverItem icon="list" label={t('playlist.add')} onClick={() => setPicking(true)} />}
-      {canTogether && queueable(item) && <PopoverItem icon="users" label={t('together.menu')} onClick={done(() => void watchTogether(item))} />}
+      {canTogether && queueable(item) && <PopoverItem icon="users" label={t('together.menu')} onClick={() => void togetherTarget(item).then((x) => { if (x) setInviting(x); else onClose(); })} />}
       {onPlayVersion && <PopoverItem icon="film" label={t('details.playVersion')} onClick={onPlayVersion} />}
       {inContinue && <PopoverItem icon="close" label={t('action.removeContinue')} onClick={done(() => void takeOffContinue(item))} />}
       {/* A card on the queue's row: arrange the queue, as the web player's queue list. */}

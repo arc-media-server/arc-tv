@@ -291,3 +291,38 @@ export function following(room: WatchRoom, itemId: string): 'follow' | 'unavaila
   if (!room.available) return 'unavailable';
   return room.item_id === itemId ? 'follow' : 'elsewhere';
 }
+
+// --- Invitations ---
+
+/** The line under a person in the invite picker: can't watch the title, a friend, or a profile on this server. */
+export function personDetail(p: WatchPerson): 'cantWatch' | 'friend' | 'household' {
+  if (!p.can_watch) return 'cantWatch';
+  return p.friend ? 'friend' : 'household';
+}
+
+/** Choosing someone in the picker: on, or off again. People who can't watch the title can't be chosen. */
+export function toggleChosen(chosen: string[], p: WatchPerson): string[] {
+  if (!p.can_watch) return chosen;
+  return chosen.indexOf(p.id) >= 0 ? chosen.filter((id) => id !== p.id) : chosen.concat(p.id);
+}
+
+/**
+ * Who the picker can offer: everyone but those already in the room or invited to it. By name: a
+ * participant's id is their device's membership, not their profile, so the name is all the room
+ * says about who they are.
+ */
+export function offerable(people: WatchPerson[], room: WatchRoom | null): WatchPerson[] {
+  if (!room) return people;
+  const names = new Set(room.participants.map((p) => p.name).concat((room.invited ?? []).map((p) => p.name)));
+  return people.filter((p) => !names.has(p.name));
+}
+
+/** A listed room's main action: Return to the room this TV is in, else Join; and its other: Cancel (its maker) or Decline. */
+export function roomActions(room: ListedRoom): { main: 'join' | 'return'; other: 'cancel' | 'decline' } {
+  return { main: room.joined ? 'return' : 'join', other: room.hosting ? 'cancel' : 'decline' };
+}
+
+/** Who's in a listed room and who's invited, for its menu (each list empty when there's nobody). */
+export function roomPeople(room: ListedRoom): { here: string[]; invited: string[] } {
+  return { here: room.participants ?? [], invited: room.invited ?? [] };
+}
