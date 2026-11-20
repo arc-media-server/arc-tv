@@ -105,12 +105,12 @@ export function audioTrackName(a: AudioTrack): string {
 /** The year, age rating, length and genres line under a title. */
 export function detailsLine(it: Item, genres = 3): string {
   const parts: string[] = [];
-  if (it.kind === 'episode' && it.season_number !== undefined) parts.push(t('details.episode', { season: it.season_number, episode: it.episode_number ?? 0 }));
+  if (it.kind === 'episode') parts.push(episodeCode(it));
   if (it.year) parts.push(String(it.year));
   if (it.content_rating) parts.push(it.content_rating);
   if (it.runtime_min) parts.push(formatRuntime(it.runtime_min));
   parts.push(...(it.genres ?? []).slice(0, genres));
-  return parts.join(' · ');
+  return parts.filter(Boolean).join(' · ');
 }
 
 /** The web's labels for a title page: picture and main sound for one version, or how many versions. */
@@ -167,11 +167,23 @@ export function watched(it: Item): boolean {
   return it.kind === 'series' ? it.unwatched_count === 0 : !!it.user_data?.played;
 }
 
-/** "S1 · E2", "Season 1" without an episode number, or '' when the item doesn't say (GET /items/{id}). */
+/**
+ * An episode's number as every Arc app writes it: "S1 · E2", "Special 3" for season 0, "Season 1" (or
+ * "Specials") without an episode number, or '' when the item doesn't say (GET /items/{id}).
+ */
 export function episodeCode(it: Item): string {
   if (it.season_number === undefined) return '';
   // An episode outside the show's episode order has no place in it (Arc sends 0 and 0): no code.
   if (it.season_number === 0 && it.episode_number === 0) return '';
-  if (it.episode_number === undefined) return t('details.season', { n: it.season_number });
+  if (it.episode_number === undefined) return it.season_number === 0 ? t('details.specials') : t('details.season', { n: it.season_number });
+  if (it.season_number === 0) return t('details.special', { n: it.episode_number });
   return t('details.episode', { season: it.season_number, episode: it.episode_number });
+}
+
+/**
+ * An episode where it's the subject (the player, its page, episode lists, Up Next): its number, then
+ * its title, "S1 · E4 · Pilot". Just the title when it has no number.
+ */
+export function episodeHeading(it: Item): string {
+  return [it.episode_number !== undefined ? episodeCode(it) : '', it.title].filter(Boolean).join(' · ');
 }

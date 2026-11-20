@@ -14,7 +14,7 @@ import { Button, Container, Focusable, useInitialFocus } from '../components/spo
 import { Overlay, Popover, PopoverItem } from '../components/Menu';
 import { MediaInfo, MoreMenu, toggleWatched, toggleWatchlist, useCanQueue } from '../components/TitleMenu';
 import { formatRuntime, formatTime, t } from '../i18n';
-import { episodeCode, formatLabels, languageName, nextEpisode, resumeMs, versionLabel, versionsOf, watched } from '../lib/format';
+import { episodeCode, episodeHeading, formatLabels, languageName, nextEpisode, resumeMs, versionLabel, versionsOf, watched } from '../lib/format';
 import { useActive, useNav } from '../lib/nav';
 import { queues, setSeasonPlayed, useChanges, withChanges } from '../lib/store';
 import { shuffled, usePlayAll } from '../lib/playAll';
@@ -60,9 +60,8 @@ function EpisodeCard({ ep, first, unplaced, onPlay }: { ep: Item; first: boolean
         <ProgressLine progress={card.progress} />
       </Pressable>
       <div className="card-caption">
-        {/* An episode outside the order has no number in it, so none is shown (as the web). */}
-        {!unplaced && ep.episode_number !== undefined && <div className="episode-kicker">{t('details.episodeN', { n: ep.episode_number })}</div>}
-        <div className="card-title">{ep.title}</div>
+        {/* "S1 · E4 · Pilot". An episode outside the order has no number in it, so none is shown (as the web). */}
+        <div className="card-title">{unplaced ? ep.title : episodeHeading(ep)}</div>
         {ep.overview && <div className="episode-overview">{ep.overview}</div>}
         {sub && <div className="card-sub">{sub}</div>}
       </div>
@@ -345,7 +344,7 @@ export function Details({ id, episodeId }: { id: string; episodeId?: string }) {
             a dimmed copy. */}
         <section className="details-hero" data-section>
           <TitleLogo item={item} />
-          {item.kind === 'episode' && <div className="hero-episode">{[episodeCode(item), item.title].filter(Boolean).join(' · ')}</div>}
+          {item.kind === 'episode' && <div className="hero-episode">{episodeHeading(item)}</div>}
           <About item={item} meta={meta.filter(Boolean).join(' · ')} />
           <div className="hero-actions">
               <Container className="actions">

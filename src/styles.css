@@ -366,7 +366,6 @@ p { margin: 0 0 16px; }
 .season-actions .btn .icon { margin-right: 12px; }
 .unplaced-note { font-size: 24px; margin: 16px 0 0; max-width: 1400px; }
 .episode-card { width: 400px; }
-.episode-kicker { font-size: 18px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
 .episode-overview {
   font-size: 22px; line-height: 1.35; color: rgba(245, 245, 247, 0.65); margin: 6px 0 6px; white-space: normal;
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; max-height: 90px;
