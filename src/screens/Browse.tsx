@@ -13,16 +13,18 @@ import { LibraryContent, WatchlistContent } from './Library';
 import { PlaylistsContent } from './Playlists';
 import { SearchContent } from './Search';
 import { SettingsContent } from './Settings';
+import { TogetherContent } from './Together';
+import { useCanTogether } from '../lib/together';
 
 // Live updates
 import { useLiveRefresh } from '../lib/live-updates';
 import { liveTopics } from '../lib/live-hints';
 
 // The main screen, as the Android app's BrowseScreen: a rail down the left (Search, Home, the
-// libraries with the Watchlist where the profile put it, Playlists after them, and the profile at the bottom) that opens
+// libraries with the Watchlist where the profile put it, Playlists and Watch Together after them, and the profile at the bottom) that opens
 // into labels when it has the focus, and the chosen section beside it.
 
-export type Section = { kind: 'home' } | { kind: 'search' } | { kind: 'watchlist' } | { kind: 'playlists' } | { kind: 'settings' } | { kind: 'library'; id: number; genre?: string; fromSearch?: boolean };
+export type Section = { kind: 'home' } | { kind: 'search' } | { kind: 'watchlist' } | { kind: 'playlists' } | { kind: 'together' } | { kind: 'settings' } | { kind: 'library'; id: number; genre?: string; fromSearch?: boolean };
 
 const same = (a: Section, b: Section) => a.kind === b.kind && (a.kind !== 'library' || a.id === (b as { id: number }).id);
 
@@ -89,6 +91,7 @@ export function Browse({ profile, canSwitchProfile, serverName, onSwitchProfile,
   // Coming back from a title or the player: what's shown is loaded again, quietly.
   const [visits, setVisits] = useState(0);
   const [prefs, setPrefs] = useState<Prefs | null>(null);
+  const canTogether = useCanTogether();
 
   const load = useCallback(() => {
     setError('');
@@ -163,6 +166,7 @@ export function Browse({ profile, canSwitchProfile, serverName, onSwitchProfile,
         {section.kind === 'search' && <SearchContent onReady={ready} onGenre={(g) => setSection({ kind: 'library', id: g.library_id, genre: g.name, fromSearch: true })} />}
         {section.kind === 'watchlist' && <WatchlistContent visits={visits} onReady={ready} />}
         {section.kind === 'playlists' && <PlaylistsContent visits={visits} onReady={ready} />}
+        {section.kind === 'together' && <TogetherContent onReady={ready} />}
         {section.kind === 'settings' && <SettingsContent serverName={serverName} onSwitchServer={onSwitchServer} onSignOut={onSignOut} onReady={ready} />}
         {lib && <LibraryContent key={`${lib.id}:${section.kind === 'library' ? section.genre ?? '' : ''}`} library={lib} genre={section.kind === 'library' ? section.genre : undefined} visits={visits} onReady={ready} />}
       </Container>
@@ -181,6 +185,7 @@ export function Browse({ profile, canSwitchProfile, serverName, onSwitchProfile,
         <SidebarItem icon={<Icon name="home" />} label={t('nav.home')} selected={section.kind === 'home'} onClick={() => show({ kind: 'home' })} />
         {items}
         <SidebarItem icon={<Icon name="playlist" />} label={t('nav.playlists')} selected={section.kind === 'playlists'} onClick={() => show({ kind: 'playlists' })} />
+        {canTogether && <SidebarItem icon={<Icon name="users" />} label={t('together.title')} selected={section.kind === 'together'} onClick={() => show({ kind: 'together' })} />}
         <div className="side-spacer" />
         <SidebarItem icon={<Icon name="gear" />} label={t('nav.settings')} selected={section.kind === 'settings'} onClick={() => show({ kind: 'settings' })} />
       </EntryContainer>

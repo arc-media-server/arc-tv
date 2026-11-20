@@ -518,3 +518,47 @@ p { margin: 0 0 16px; }
 
 /* Provider-only episodes stay focusable for reading, with the existing card layout. */
 .episode-card.missing .artwork { opacity: 0.45; }
+
+/* Watch Together: the room card over the player, the notes near the top, and Join with a Code. */
+.room-overlay { z-index: 22; }
+.room-card { width: 900px; }
+.room-head { display: flex; flex-direction: row; align-items: center; margin-bottom: 20px; }
+.room-head .icon { margin-right: 24px; flex: 0 0 auto; }
+.room-head-text { min-width: 0; }
+.room-head .overlay-title { margin-bottom: 4px; }
+.room-item { font-size: 28px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.room-count { text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+.room-people { margin-bottom: 20px; }
+.room-person { display: flex; flex-direction: row; align-items: center; height: 56px; font-size: 30px; }
+.room-name { flex: 1 1 auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: 20px; }
+.room-person .label { margin-right: 20px; }
+.room-code { background: rgba(255, 255, 255, 0.06); border-radius: 24px; padding: 20px 28px; margin-bottom: 24px; }
+.room-code-text { font-size: 64px; font-weight: 700; letter-spacing: 6px; margin-bottom: 4px; }
+.room-actions { margin-top: 8px; }
+.room-pill {
+  position: absolute; top: 56px; left: 50%; transform: translateX(-50%); z-index: 9; max-width: 1400px;
+  display: flex; flex-direction: row; align-items: center; padding: 18px 36px; border-radius: 48px;
+  background: rgba(0, 0, 0, 0.75); border: 2px solid rgba(255, 255, 255, 0.15); font-size: 28px; white-space: nowrap;
+}
+.room-pill .icon { margin-right: 18px; flex: 0 0 auto; }
+.room-pill span { overflow: hidden; text-overflow: ellipsis; }
+.join-code { width: 1100px; }
+.code-slots { display: flex; flex-direction: row; margin: 28px 0 8px 24px; }
+.code-slot {
+  width: 84px; height: 108px; margin-right: 14px; border-radius: 18px; background: rgba(255, 255, 255, 0.08);
+  font-size: 60px; font-weight: 700; display: flex; align-items: center; justify-content: center; border: 3px solid transparent;
+}
+.code-slot.next { border-color: rgba(255, 255, 255, 0.6); }
+.code-slot.after-dash { margin-left: 46px; }
+.join-status { min-height: 40px; margin: 8px 0 12px 24px; font-size: 26px; }
+.keypad { margin-left: 24px; }
+.keypad-row { display: flex; flex-direction: row; margin-bottom: 14px; }
+.key {
+  width: 96px; height: 80px; margin-right: 14px; border-radius: 18px; background: rgba(255, 255, 255, 0.08);
+  font-size: 34px; font-weight: 600; display: flex; align-items: center; justify-content: center;
+}
+.key.wide { width: 380px; font-size: 28px; }
+.key.wide .icon { margin-right: 14px; }
+.key.primary { background: var(--text); color: var(--bg); }
+.key.dim { opacity: 0.5; }
+.key.spottable:focus { background: var(--text); color: var(--bg); opacity: 1; }

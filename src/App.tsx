@@ -2,7 +2,7 @@ import { Spotlight } from '@enact/spotlight';
 import { SpotlightRootDecorator } from '@enact/spotlight/SpotlightRootDecorator';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import platform from '@platform';
-import { api, ApiError, type AuthStatus, type Extra, type Item, type Profile } from './api';
+import { api, ApiError, enc, type AuthStatus, type Extra, type Item, type Profile } from './api';
 import { CardMenuHost } from './components/TitleMenu';
 import { Container, focusElement } from './components/spot';
 import type { FoundServer } from './discovery';
@@ -10,6 +10,7 @@ import { t } from './i18n';
 import { handleBack } from './lib/back';
 import { ActiveContext, NavContext, type Nav, type PlayOptions } from './lib/nav';
 import { resetProfile } from './lib/store';
+import { recoverRoom, resetTogether, together } from './lib/together';
 import { useToast } from './lib/toast';
 import { forgetServer, loadSession, saveServer, saveToken, type SavedServer } from './session';
 import { Browse } from './screens/Browse';
@@ -35,7 +36,7 @@ type Screen =
   | { name: 'collection'; id: string }
   | { name: 'playlist'; id: string }
   | { name: 'person'; id: number }
-  | { name: 'player'; item: Item; startMs: number; preroll?: boolean; entryId?: string; carryOn?: boolean; fileId?: number }
+  | { name: 'player'; item: Item; startMs: number; preroll?: boolean; entryId?: string; carryOn?: boolean; fileId?: number; together?: boolean }
   | { name: 'extra'; extra: Extra };
 
 type Entry = { key: number; screen: Screen; focus?: HTMLElement | null };
@@ -77,6 +78,8 @@ function App() {
       if (!s.signed_in) return reset({ name: 'signin' });
       if (!s.profile) return reset({ name: 'profiles' });
       reset({ name: 'browse' });
+      // Back in a Watch Together room this TV and profile were in (a relaunch within 30 s).
+      void recoverRoom();
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) reset({ name: 'signin' });
       else setFatal((e as Error).message);
@@ -135,8 +138,32 @@ function App() {
     await api('/auth/logout', { method: 'POST' }).catch(() => {});
     saveToken('');
     resetProfile();
+    resetTogether();
     reset({ name: 'signin' });
   }, [reset]);
+
+  // Watch Together: joining or starting a room opens the player on the room's title, where the
+  // room is; a new title in the room (the host's Up Next) replaces the player showing the last
+  // one. A title this profile can't play opens nothing (the player says so). Signed out: sign in.
+  // The session and title last opened: room updates come every couple of seconds, often before
+  // the pushed player is on the stack, and must not open it twice.
+  const opening = useRef<{ s: unknown; id: string } | null>(null);
+  useEffect(() => together.room.subscribe((room) => {
+    const s = together.session.get();
+    if (!s || !room || !room.available || !room.item_id) return;
+    const top = stackRef.current[stackRef.current.length - 1].screen;
+    if (top.name === 'player' && top.together && top.item.id === room.item_id) return;
+    if (opening.current && opening.current.s === s && opening.current.id === room.item_id) return;
+    const id = room.item_id;
+    opening.current = { s, id };
+    api<Item>(`/items/${enc(id)}`).then((item) => {
+      if (together.session.get() !== s || s.room.item_id !== id) return;
+      const screen: Screen = { name: 'player', item, startMs: s.expected(), together: true, preroll: false };
+      if (stackRef.current[stackRef.current.length - 1].screen.name === 'player') replace(screen);
+      else push(screen);
+    }, () => { opening.current = null; });
+  }), [push, replace]);
+  useEffect(() => together.ended.subscribe((why) => { if (why === 'signedOut') void resume(); }), [resume]);
 
   const nav = useMemo<Nav>(() => ({
     open: (it) => push(it.kind === 'episode' && it.parent_id ? { name: 'details', id: it.parent_id, episodeId: it.id } : { name: 'details', id: it.id }),
@@ -184,6 +211,8 @@ function App() {
           <Profiles
             onChosen={(p: Profile) => {
               resetProfile();
+              resetTogether();
+              void recoverRoom();
               setStatus((st) => ({ signed_in: true, profiles: [], ...st, profile: p }));
               api<AuthStatus>('/auth/status').then(setStatus, () => {});
               reset({ name: 'browse' });
@@ -211,7 +240,7 @@ function App() {
       case 'person':
         return <PersonPage id={s.id} />;
       case 'player':
-        return <Player preroll={s.preroll} item={s.item} startMs={s.startMs} entryId={s.entryId} carryOn={s.carryOn} fileId={s.fileId} />;
+        return <Player preroll={s.preroll} item={s.item} startMs={s.startMs} entryId={s.entryId} carryOn={s.carryOn} fileId={s.fileId} together={s.together} />;
       case 'extra':
         return <ExtraPlayer extra={s.extra} />;
     }

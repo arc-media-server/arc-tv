@@ -14,7 +14,8 @@
     "package:webos": "npm run build:webos && node scripts/package-webos.mjs",
     "package:tizen": "npm run build:tizen && node scripts/package-tizen.mjs",
     "test:theme-music": "node scripts/test-theme-music.mjs",
-    "check": "tsc -b && npm run build:webos && npm run build:tizen && node scripts/check-bundle.mjs"
+    "test:watch-together": "node scripts/test-watch-together.mjs",
+    "check": "tsc -b && npm run test:watch-together && npm run build:webos && npm run build:tizen && node scripts/check-bundle.mjs"
   },
   "dependencies": {
     "@enact/core": "^5.6.0",
