@@ -1,4 +1,7 @@
 import { useSpoilerItem } from '../lib/useSpoilers';
+import { EndedPane, LeaveConfirm, RoomCard, RoomPill, useRoomNotice, WaitingPill } from '../components/Together';
+import { endRoom, leaveRoom, together } from '../lib/together';
+import { correction, following, hosting, keepNudging, startedOnce } from '../lib/watch-together';
 import { Spotlight } from '@enact/spotlight';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import platform from '@platform';
@@ -28,6 +31,12 @@ import type { NativePlayer, PlayerCaps } from '../platform/types';
 // playback info. Skip Intro / Credits and the Up Next countdown follow Arc's markers. Text
 // subtitles are drawn by the app; a picture track (PGS, VobSub) is burned into the video by Arc,
 // which restarts the stream converted, as the web player does.
+//
+// In a Watch Together room (`together`), the room decides where and whether it plays: Play,
+// Pause and seeks go to the room as commands, and this player follows the room (keeping within
+// half a second of it) rather than acting on its own keys. The lobby shows until the room first
+// plays; Back opens the room's panel rather than closing the player, which keeps the room until
+// Leave. Audio, subtitles, version and quality stay this TV's own.
 
 type Attempt = 'direct' | 'remux' | 'convert';
 type Menu = 'audio' | 'subtitles' | 'version' | 'quality' | 'chapters' | 'speed' | 'info' | null;
@@ -95,10 +104,10 @@ function methodLabel(p: Playback): [string, string] {
 
 // Pre-roll: keep the film player unmounted until the clips finish, so they never report
 // film progress, start a conversion, or advance its queue. Replacements skip this gate.
-type PlayerProps = { item: Item; startMs: number; entryId?: string; carryOn?: boolean; fileId?: number; preroll?: boolean };
+type PlayerProps = { item: Item; startMs: number; entryId?: string; carryOn?: boolean; fileId?: number; preroll?: boolean; together?: boolean };
 export function Player(props: PlayerProps) {
   const nav = useNav();
-  const enabled = props.preroll !== false && props.startMs <= 0 && props.item.kind === 'movie';
+  const enabled = props.preroll !== false && props.startMs <= 0 && props.item.kind === 'movie' && !props.together;
   const [clips, setClips] = useState<PrerollClip[] | null>(enabled ? null : []);
   const [index, setIndex] = useState(0);
   useBack(() => { nav.back(); }, clips === null || index < clips.length);
@@ -155,7 +164,7 @@ function Preroll({ clip, onDone }: { clip: PrerollClip; onDone: () => void }) {
   </div>;
 }
 
-function FilmPlayer({ item: start, startMs, entryId, carryOn, fileId }: PlayerProps) {
+function FilmPlayer({ item: start, startMs, entryId, carryOn, fileId, together: forRoom }: PlayerProps) {
   const nav = useNav();
   const host = useRef<HTMLDivElement>(null);
   const player = useRef<NativePlayer | null>(null);
@@ -195,6 +204,38 @@ function FilmPlayer({ item: start, startMs, entryId, carryOn, fileId }: PlayerPr
   const [style, setStyle] = useState<Prefs['subtitle_style']>({});
   const lastInput = useRef(Date.now());
   const [inputTick, setInputTick] = useState(0);
+
+  // Watch Together: the room this player follows, while this TV is in one.
+  const session = together.session.use();
+  const roomState = together.room.use();
+  const endedHow = together.ended.use();
+  const connected = together.connected.use();
+  const s = forRoom && session ? session : null;
+  const room = s ? roomState : null;
+  const sessionRef = useRef(s);
+  sessionRef.current = s;
+  const loadingRef = useRef(true);
+  loadingRef.current = loading;
+  const failedRef = useRef(false);
+  failedRef.current = !!failed || stopped !== null;
+  const scrubRef = useRef<number | null>(null);
+  scrubRef.current = scrub;
+  const [lobbyDone, setLobbyDone] = useState(false);
+  if (room && !lobbyDone && (s ? s.started : startedOnce(room))) setLobbyDone(true);
+  const relation = room ? following(room, itemId) : null;
+  const inLobby = !!room && relation === 'follow' && !lobbyDone;
+  const hostingRoom = !!room && hosting(room);
+  const [roomPanel, setRoomPanel] = useState<'panel' | 'confirm' | null>(null);
+  const [endedPane, setEndedPane] = useState(false);
+  const [lostNote, setLostNote] = useState('');
+  const notice = useRoomNotice(room);
+  const wasInRoom = useRef(false);
+  if (s) wasInRoom.current = true;
+  /** This TV ended the room itself (no "the host ended it" pane). */
+  const iEnded = useRef(false);
+  const nudging = useRef(false);
+  /** After this TV's own seek, drift isn't corrected until the room takes it (new generation) or 3 s pass. */
+  const seekGuard = useRef<{ gen: number; until: number } | null>(null);
 
   /** Where in the file the player is: a converted stream starts at its offset. */
   const position = useCallback(() => {
@@ -266,6 +307,9 @@ function FilmPlayer({ item: start, startMs, entryId, carryOn, fileId }: PlayerPr
       player.current = native;
       native.on((ev, detail) => {
         if (player.current !== native) return;
+        // The room hears at once when this player starts or stops buffering. Player events never
+        // become room commands (only the viewer's keys do), so applying the room can't echo back.
+        if (ev === 'playing' || ev === 'waiting') window.setTimeout(() => sessionRef.current?.reportNow(), 0);
         if (ev === 'playing') { setPlaying(true); setLoading(false); }
         if (ev === 'paused') { setPlaying(false); report('paused'); }
         if (ev === 'waiting') setLoading(true);
@@ -280,7 +324,11 @@ function FilmPlayer({ item: start, startMs, entryId, carryOn, fileId }: PlayerPr
       await native.load(url, p.hls ? Math.max(0, fromMs - p.offset_ms) : fromMs);
       if (gen !== generation.current) return;
       native.setSpeed?.(speedRef.current);
-      native.play();
+      // In a room the room says when to play (the follow loop): a loaded, paused player is ready.
+      if (sessionRef.current) {
+        setLoading(false);
+        sessionRef.current.reportNow();
+      } else native.play();
     } catch (e) {
       if (gen !== generation.current) return;
       if (e instanceof ApiError && e.status === 403) {
@@ -341,6 +389,14 @@ function FilmPlayer({ item: start, startMs, entryId, carryOn, fileId }: PlayerPr
       if (full) setItem((was) => ({ ...full, series_title: full.series_title ?? was.series_title, season_number: full.season_number ?? was.season_number, episode_number: full.episode_number ?? was.episode_number, images: { ...was.images, ...full.images } }));
       const p = await ready;
       const autoPlay = p.auto_play !== false;
+      // In a room the room is the queue: only the host's Up Next (the next episode) moves it on.
+      if (forRoom) {
+        if ((full ?? start).kind === 'episode' && autoPlay) {
+          const n = await apiOrNull<Item>(`/items/${enc(itemId)}/next`).catch(() => null);
+          if (live && n && n.id) setNext({ item: n });
+        }
+        return;
+      }
       // The play queue follows what's playing: this title's entry, or a new queue of it.
       let entry: string | null | undefined = entryId;
       if (entryId) await queues.moveTo(entryId);
@@ -424,16 +480,51 @@ function FilmPlayer({ item: start, startMs, entryId, carryOn, fileId }: PlayerPr
     if (rel >= 0 && available > 0 && rel <= available - 2000) player.current?.seek(rel);
     else void load(target);
   };
-  const seekBy = (d: number) => seekTo(position() + d);
+  /** A room command from the viewer's keys; a refusal that isn't the room ending says so. */
+  const roomCommand = (fn: (room: NonNullable<typeof s>) => Promise<unknown>) => {
+    const cur = sessionRef.current;
+    if (!cur) return;
+    fn(cur).catch(() => { if (cur.active) toast(t('together.commandFailed')); });
+  };
+  /** A seek the viewer chose: in a room, here at once and the room (and so everyone) there. */
+  const commitSeek = (ms: number) => {
+    const cur = sessionRef.current;
+    if (!cur) { seekTo(ms); return; }
+    const target = Math.max(0, Math.min(ms, (planRef.current?.duration_ms || ms + 1000) - 1000));
+    seekGuard.current = { gen: cur.room.generation, until: Date.now() + 3000 };
+    seekTo(target);
+    roomCommand((x) => x.seek(target));
+  };
+  // In a room, Back and Forward move the timeline's marker; one seek goes to the room once it
+  // rests (so a held Forward sends one command), as scrubbing does.
+  const seekBy = (d: number) => {
+    if (!sessionRef.current) { seekTo(position() + d); return; }
+    const dur = planRef.current?.duration_ms ?? 0;
+    setScrub((was) => Math.max(0, Math.min(dur || Infinity, (was ?? position()) + d)));
+    setControls(true);
+  };
   const togglePlay = () => {
+    if (sessionRef.current) {
+      roomCommand((x) => (x.room.state === 'paused' ? x.play() : x.pause()));
+      return;
+    }
     const p = player.current;
     if (!p) return;
     if (p.paused()) p.play();
     else p.pause();
   };
 
+  // In a room, Up Next is the host's, and moves everyone on (App opens the new title's player);
+  // the others never move on by themselves.
+  const shownNext = s ? (hostingRoom ? next : null) : next;
   const playNext = () => {
     if (!next) return;
+    if (sessionRef.current) {
+      setUpNextIn(null);
+      const n = next.item;
+      roomCommand((x) => x.changeItem(n.id, n.user_data?.played ? 0 : n.user_data?.position_ms ?? 0));
+      return;
+    }
     nav.play(next.item, next.item.user_data?.played ? 0 : next.item.user_data?.position_ms ?? 0, { replace: true, entryId: next.entryId, carryOn: !next.entryId });
   };
 
@@ -447,20 +538,22 @@ function FilmPlayer({ item: start, startMs, entryId, carryOn, fileId }: PlayerPr
   useEffect(() => {
     if (!marker || marker.kind === 'credits' || !prefsRef.current.auto_skip) return;
     const key = `${marker.kind}:${marker.start_ms}`;
-    if (autoSkipped.current.indexOf(key) >= 0) return;
+    // In a room each TV would skip on its own; the viewer skips with the button instead.
+    if (autoSkipped.current.indexOf(key) >= 0 || sessionRef.current) return;
     autoSkipped.current += `|${key}`;
     seekTo(marker.end_ms);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [marker && marker.start_ms]);
   useEffect(() => {
-    if (inCredits && next && !creditsOffered) {
+    if (inCredits && shownNext && !creditsOffered) {
       setCreditsOffered(true);
       setUpNextIn(COUNTDOWN);
     }
-  }, [inCredits, next, creditsOffered]);
+  }, [inCredits, shownNext, creditsOffered]);
   useEffect(() => {
     if (!atEnd) return;
-    if (next) setUpNextIn((n) => n ?? COUNTDOWN);
+    if (shownNext) setUpNextIn((n) => n ?? COUNTDOWN);
+    else if (sessionRef.current) return; // the room decides what's next
     else {
       void queues.end();
       nav.back();
@@ -489,32 +582,131 @@ function FilmPlayer({ item: start, startMs, entryId, carryOn, fileId }: PlayerPr
   // Scrubbing on the timeline moves a marker; the seek happens when it rests.
   useEffect(() => {
     if (scrub === null) return;
-    const timer = window.setTimeout(() => { seekTo(scrub); setScrub(null); }, 900);
+    const timer = window.setTimeout(() => { commitSeek(scrub); setScrub(null); }, 900);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scrub]);
 
-  // Back: Up Next, then a menu, then the controls, then the player itself (App pops it).
+  // Back: Up Next, then a menu, then the controls, then the player itself (App pops it). In a
+  // room, Back opens the room's panel instead: the player (and the room) stay until Leave.
   useBack(() => {
+    // The lobby and the room's panes take Back themselves (the lobby can mount with the player,
+    // so its handler may be older than this one).
+    if (inLobby || roomPanel !== null || endedPane) return false;
     if (upNextIn !== null) cancelUpNext();
     else if (menu) setMenu(null);
     else if (controls && !stopped && !failed) setControls(false);
+    else if (sessionRef.current) setRoomPanel('panel');
     else return false;
   });
 
-  // Showing the controls puts the focus on Play.
+  // --- Watch Together ---
+
+  /** Leaves the room and closes the player (the lobby's Leave), or plays on alone. */
+  const leave = (close: boolean) => {
+    setRoomPanel(null);
+    void leaveRoom();
+    if (close) nav.back();
+    else toast(t('together.youLeft'));
+  };
+  const askLeave = () => {
+    if (hostingRoom) setRoomPanel('confirm');
+    else leave(inLobby);
+  };
+  const endForEveryone = () => {
+    setRoomPanel(null);
+    iEnded.current = true;
+    void endRoom().then((ok) => {
+      if (ok) toast(t('together.youEnded'));
+      else { iEnded.current = false; toast(t('together.endFailed')); }
+    });
+  };
+  // The room ended or this TV is out of it: play on alone (at the viewer's own speed again).
   useEffect(() => {
-    if (!controls) {
+    if (!forRoom || !wasInRoom.current || !endedHow) return;
+    nudging.current = false;
+    player.current?.setSpeed?.(speedRef.current);
+    setRoomPanel(null);
+    if (endedHow === 'ended' && !iEnded.current) setEndedPane(true);
+    if (endedHow === 'gone') {
+      setLostNote(t('together.lost'));
+      const timer = window.setTimeout(() => setLostNote(''), 6000);
+      return () => window.clearTimeout(timer);
+    }
+  }, [endedHow, forRoom]);
+
+  // Follow the room (docs/WATCH-TOGETHER-API.md, "Client sync algorithm"): play and pause with
+  // it, and stay within half a second of where it should be: a slightly slower or faster speed for
+  // small drift where the TV's player has one (webOS), a jump beyond three seconds (and on Tizen,
+  // whose AVPlay has no smooth speed change). Heartbeats report where this player really is.
+  const seekLocal = useRef(seekTo);
+  seekLocal.current = seekTo;
+  useEffect(() => {
+    if (!s) return;
+    s.setReporter(() => {
+      const native = player.current;
+      if (failedRef.current) return { positionMS: position(), state: 'paused', ready: false };
+      const busy = loadingRef.current || !native || !planRef.current;
+      return { positionMS: position(), state: busy ? 'waiting' : native!.paused() ? 'paused' : 'playing', ready: !busy };
+    });
+    const follow = () => {
+      const native = player.current;
+      const p = planRef.current;
+      if (!native || !p || loadingRef.current || failedRef.current || scrubRef.current !== null) return;
+      const r = s.room;
+      if (following(r, itemId) !== 'follow') {
+        if (!native.paused()) native.pause();
+        return;
+      }
+      const g = seekGuard.current;
+      if (g && (r.generation !== g.gen || Date.now() > g.until)) seekGuard.current = null;
+      const expected = s.expected();
+      const local = position();
+      if (r.state === 'playing') {
+        // Finished here and the room's at the end too: don't start the file again.
+        if (ended.current && expected >= (p.duration_ms || 0) - 2000) return;
+        if (native.paused()) native.play();
+        if (seekGuard.current) return;
+        const c = correction(local, expected, !!native.setSpeed);
+        if (c.kind === 'seek') {
+          if (nudging.current) { native.setSpeed?.(1); nudging.current = false; }
+          seekLocal.current(c.to);
+        } else if (c.kind === 'rate') {
+          native.setSpeed?.(c.rate);
+          nudging.current = true;
+        } else if (nudging.current && !keepNudging(local, expected, true)) {
+          native.setSpeed?.(1);
+          nudging.current = false;
+        }
+      } else {
+        if (nudging.current) { native.setSpeed?.(1); nudging.current = false; }
+        if (!native.paused()) native.pause();
+        if (!seekGuard.current && Math.abs(local - expected) > 1000) seekLocal.current(expected);
+      }
+    };
+    const timer = window.setInterval(follow, 500);
+    return () => {
+      window.clearInterval(timer);
+      s.setReporter(null);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [s]);
+  const overlayOpen = inLobby || roomPanel !== null || endedPane;
+
+  // Showing the controls puts the focus on Play. Watch Together's panels take the focus themselves.
+  useEffect(() => {
+    if (!controls && !overlayOpen) {
       Spotlight.pause();
       return;
     }
     Spotlight.resume();
+    if (overlayOpen) return;
     const timer = window.setTimeout(() => {
       const cur = Spotlight.getCurrent() as HTMLElement | null;
       if (!cur || !cur.closest('.player')) Spotlight.focus('player-play');
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [controls]);
+  }, [controls, overlayOpen]);
 
   // Keys the controls don't take: media keys always; with the controls hidden, OK pauses (or
   // skips), Left and Right go back and forward 10 seconds, Up and Down show the controls.
@@ -524,16 +716,21 @@ function FilmPlayer({ item: start, startMs, entryId, carryOn, fileId }: PlayerPr
       setInputTick((n) => n + 1);
       const key = platform.remoteKey(e.keyCode);
       const take = () => { e.preventDefault(); e.stopPropagation(); };
+      if (overlayOpen) return; // the lobby or a room panel has the keys
+      const roomState = sessionRef.current?.room.state;
       if (key === 'playPause') { take(); togglePlay(); setControls(true); return; }
-      if (key === 'play') { take(); player.current?.play(); return; }
-      if (key === 'pause') { take(); player.current?.pause(); setControls(true); return; }
+      if (key === 'play') { take(); if (!roomState) player.current?.play(); else if (roomState === 'paused') togglePlay(); return; }
+      if (key === 'pause') { take(); if (!roomState) player.current?.pause(); else if (roomState !== 'paused') togglePlay(); setControls(true); return; }
       if (key === 'forward') { take(); seekBy(10000); setControls(true); return; }
       if (key === 'rewind') { take(); seekBy(-10000); setControls(true); return; }
-      if (key === 'stop') { take(); nav.back(); return; }
+      if (key === 'stop') { take(); if (sessionRef.current) setRoomPanel('panel'); else nav.back(); return; }
+      // In a room, a seek waits a moment for more presses (one command for a held Right): while
+      // it waits, Left and Right add to it even though the controls are showing its position.
+      if (scrub !== null && sessionRef.current && (e.keyCode === 37 || e.keyCode === 39)) { take(); seekBy(e.keyCode === 37 ? -10000 : 10000); return; }
       if (controls || upNextIn !== null || stopped || failed || key === 'back') return;
       if (e.keyCode === 13) {
         take();
-        if (marker) seekTo(marker.end_ms);
+        if (marker) commitSeek(marker.end_ms);
         else { togglePlay(); setControls(true); }
       } else if (e.keyCode === 37) { take(); seekBy(-10000); }
       else if (e.keyCode === 39) { take(); seekBy(10000); }
@@ -637,22 +834,32 @@ function FilmPlayer({ item: start, startMs, entryId, carryOn, fileId }: PlayerPr
           <p className="muted">{t('player.failedDetail', { detail: failed })}</p>
           <Container className="inline">
             <Button data-default onClick={() => { attempt.current = 'direct'; retried.current = false; void load(position()); }}>{t('common.retry')}</Button>
-            <Button onClick={() => nav.back()}>{t('common.close')}</Button>
+            {/* In a room a failure here (e.g. Arc's converter is busy) is this TV's alone: the room carries on. */}
+            {s ? <Button onClick={() => leave(true)}>{t('together.leaveRoom')}</Button> : <Button onClick={() => nav.back()}>{t('common.close')}</Button>}
           </Container>
         </Trap>
       )}
-      {!controls && marker && !stopped && !failed && upNextIn === null && (
+      {!controls && marker && !stopped && !failed && upNextIn === null && !overlayOpen && (
         <div className="skip-button">{t(marker.kind === 'recap' ? 'player.skipRecap' : marker.kind === 'credits' ? 'player.skipCredits' : 'player.skipIntro')}</div>
       )}
-      {controls && !stopped && !failed && (
+      {room && !inLobby && !endedPane && (
+        // Watch Together's notes near the top: this title isn't available here, who the room is
+        // waiting for, a lost connection, or what someone else just did.
+        relation === 'unavailable' ? <RoomPill text={t('together.unavailable')} />
+          : room.state === 'waiting' ? <WaitingPill room={room} serverNow={() => s!.serverNow()} />
+            : !connected ? <RoomPill text={t('together.reconnecting')} />
+              : notice ? <RoomPill text={notice} /> : null
+      )}
+      {!room && lostNote && <RoomPill text={lostNote} />}
+      {controls && !stopped && !failed && !inLobby && (
         // As the Apple TV app's player: everything along the bottom over a shadow; the title on
         // the left, the buttons (in the web player's order) on the right, then a thin timeline
         // with the time played and the time left under it.
         <Container className="controls">
           <div className="controls-bottom">
             {marker && upNextIn === null && (
-              <Button className="skip-inline" onClick={() => (marker.kind === 'credits' && next ? playNext() : seekTo(marker.end_ms))}>
-                {t(marker.kind === 'recap' ? 'player.skipRecap' : marker.kind === 'credits' ? (next ? 'player.playNext' : 'player.skipCredits') : 'player.skipIntro')}
+              <Button className="skip-inline" onClick={() => (marker.kind === 'credits' && shownNext ? playNext() : commitSeek(marker.end_ms))}>
+                {t(marker.kind === 'recap' ? 'player.skipRecap' : marker.kind === 'credits' ? (shownNext ? 'player.playNext' : 'player.skipCredits') : 'player.skipIntro')}
               </Button>
             )}
             <div className="ctl-head">
@@ -664,16 +871,18 @@ function FilmPlayer({ item: start, startMs, entryId, carryOn, fileId }: PlayerPr
                 <div className="ctl-label">{label === PLAY_LABEL ? t(playing ? 'player.pause' : 'player.play') : label}</div>
                 <Container className="ctl-row">
                   {control(playing ? 'pause' : 'play', t(playing ? 'player.pause' : 'player.play'), togglePlay, 'player-play')}
-                  {next && control('next', t('player.next', { title: next.item.title }), playNext)}
+                  {shownNext && control('next', t('player.next', { title: shownNext.item.title }), playNext)}
                   {control('back10', t('player.back10'), () => seekBy(-10000))}
                   {control('fwd10', t('player.forward10'), () => seekBy(10000))}
                   <span className="ctl-gap" />
+                  {s && control('users', t('together.title'), () => setRoomPanel('panel'))}
                   {plan && (plan.audio_tracks ?? []).length > 1 && control('audio', t('player.audio'), () => setMenu('audio'))}
                   {plan && subtitleTracks.length > 0 && control('captions', t('player.subtitles'), () => setMenu('subtitles'))}
                   {plan && (plan.versions ?? []).length > 1 && control('film', t('player.version'), () => setMenu('version'))}
                   {plan && control('sliders', t('player.quality'), () => setMenu('quality'))}
                   {plan && chapters.length > 1 && control('list', t('player.chapters'), () => setMenu('chapters'))}
-                  {player.current?.setSpeed && control('gauge', t('player.speed'), () => setMenu('speed'))}
+                  {/* In a room everyone plays at the room's speed. */}
+                  {!s && player.current?.setSpeed && control('gauge', t('player.speed'), () => setMenu('speed'))}
                   {plan && control('info', t('player.info'), () => setMenu('info'))}
                 </Container>
               </div>
@@ -718,11 +927,16 @@ function FilmPlayer({ item: start, startMs, entryId, carryOn, fileId }: PlayerPr
           onSubtitle={chooseSubtitle}
           onVersion={chooseVersion}
           onQuality={chooseQuality}
-          onChapter={(ms) => { setMenu(null); seekTo(ms); }}
+          onChapter={(ms) => { setMenu(null); commitSeek(ms); }}
           onSpeed={chooseSpeed}
         />
       )}
-      {next && upNextIn !== null && <UpNext next={next.item} seconds={upNextIn} onPlay={playNext} onCancel={cancelUpNext} />}
+      {shownNext && upNextIn !== null && <UpNext next={shownNext.item} seconds={upNextIn} onPlay={playNext} onCancel={cancelUpNext} />}
+      {room && (inLobby || roomPanel === 'panel') && (
+        <RoomCard room={room} lobby={inLobby} onStart={() => roomCommand((x) => x.play())} onLeave={askLeave} onEnd={endForEveryone} onClose={() => setRoomPanel(null)} />
+      )}
+      {room && roomPanel === 'confirm' && <LeaveConfirm onLeave={() => leave(inLobby)} onStay={() => setRoomPanel(inLobby ? null : 'panel')} />}
+      {endedPane && <EndedPane onContinue={() => setEndedPane(false)} onClose={() => { setEndedPane(false); nav.back(); }} />}
     </div>
   );
 }

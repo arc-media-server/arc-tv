@@ -3,7 +3,8 @@
 // only the fields this app reads are typed.
 
 export class ApiError extends Error {
-  constructor(public status: number, message: string, public needs?: string) {
+  /** `body`: the refusal's JSON (Watch Together's 409 carries the newer room); `retryAfter`: a 429's header. */
+  constructor(public status: number, message: string, public needs?: string, public body?: unknown, public retryAfter?: string | null) {
     super(message);
   }
 }
@@ -50,7 +51,7 @@ export async function api<T>(path: string, init: Init = {}): Promise<T> {
     });
     if (res.status === 204) return undefined as T;
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new ApiError(res.status, data.error || res.statusText, data.needs);
+    if (!res.ok) throw new ApiError(res.status, data.error || res.statusText, data.needs, data, res.headers.get('Retry-After'));
     if (res.status === 202) return { ...data, waiting: true } as T;
     return data as T;
   } finally {

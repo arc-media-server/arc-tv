@@ -118,6 +118,10 @@ const tizen: Platform = {
         if (code) keys[code] = key;
       } catch { /* this remote has no such key */ }
     }
+    // The number keys type Watch Together codes (they arrive as keyCodes 48–57 once registered).
+    for (let n = 0; n <= 9; n++) {
+      try { input.registerKey(String(n)); } catch { /* no number keys on this remote */ }
+    }
   },
   async deviceName() {
     const p = window.webapis?.productinfo;

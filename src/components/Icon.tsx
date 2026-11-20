@@ -33,6 +33,8 @@ const paths: Record<string, string> = {
   // Star rating
   star: 'M12 3l2.8 5.7l6.3.9l-4.6 4.4l1.1 6.3l-5.6-3l-5.6 3l1.1-6.3L3 9.6l6.2-.9z',
   info: 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18z M12 11v6 M12 7.5v.01',
+  users: 'M9 11a4 4 0 1 0 0-8a4 4 0 1 0 0 8z M2 21v-1a6 6 0 0 1 6-6h2a6 6 0 0 1 6 6v1 M16 3.1a4 4 0 0 1 0 7.8 M22 21v-1a6 6 0 0 0-4-5.6',
+  backspace: 'M21 5H8l-6 7l6 7h13z M11 9l6 6 M17 9l-6 6',
   tvShow: 'M3 7h18v12H3z M8 3l4 4l4-4',
 };
 

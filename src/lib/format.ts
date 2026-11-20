@@ -1,4 +1,4 @@
-import type { AudioTrack, Item, MediaFile, MediaStream } from '../api';
+import type { AudioTrack, Item, MediaFile, MediaStream, Season } from '../api';
 import { formatRuntime, t } from '../i18n';
 
 // Names for codecs, picture and sound, as Arc's web app and the Android app write them.
@@ -151,6 +151,16 @@ export function durationMs(it: Item): number {
 
 export function resumeMs(it: Item): number {
   return it.user_data && !it.user_data.played ? it.user_data.position_ms ?? 0 : 0;
+}
+
+/**
+ * The episode to carry on with: one part-way through, else the first not watched, specials last
+ * (a show's Play, and the episode a show's Watch Together room starts on).
+ */
+export function nextEpisode(seasons: Season[]): Item | undefined {
+  const ordered = seasons.filter((s) => s.season_number > 0).concat(seasons.filter((s) => s.season_number <= 0));
+  const eps = ordered.reduce<Item[]>((all, s) => all.concat(s.episodes), []).filter((e) => e.available !== false);
+  return eps.find((e) => resumeMs(e) > 0) ?? eps.find((e) => !e.user_data?.played) ?? eps[0];
 }
 
 export function watched(it: Item): boolean {

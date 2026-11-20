@@ -6,6 +6,7 @@ import {
 } from '../lib/format';
 import { canUse, queue, queues, removeFromContinue, setPlayed, setWatchlist, useChanges, withChanges } from '../lib/store';
 import { toast } from '../lib/toast';
+import { roomTitle, startRoom, useCanTogether } from '../lib/together';
 import { CardMenuContext, type CardPlace } from './Cards';
 import { Overlay, Popover, PopoverItem } from './Menu';
 import { Scroller, type ScrollerHandle } from './Scroller';
@@ -41,6 +42,20 @@ export async function toggleWatchlist(it: Item) {
 export async function addToQueue(it: Item, next: boolean) {
   const done = await queues.add([it.id], next);
   toast(t(!done ? 'queue.failed' : next ? 'queue.addedNext' : 'queue.added', { title: it.title }));
+}
+
+/**
+ * Watch Together from a title's menu: a room with a code, from the profile's resume point; a show
+ * starts on the episode its Play would (Android's ⋯ → Watch Together). App opens the lobby.
+ */
+async function watchTogether(it: Item) {
+  try {
+    const target = await roomTitle(it);
+    if (!target) { toast(t('together.noEpisode')); return; }
+    if (!(await startRoom(target.item, target.startMs))) toast(t('together.startFailed'));
+  } catch {
+    toast(t('together.startFailed'));
+  }
 }
 
 /** Whether this server keeps play queues for this profile (Play Next, Add to Queue, Shuffle). */
@@ -137,6 +152,7 @@ export function MoreMenu({ item, onMediaInfo, onPlayVersion, onClose, inContinue
   const [ratingOpen, setRatingOpen] = useState(false);
   const moves = useQueueMoves(queueEntry);
   const canQueue = useCanQueue();
+  const canTogether = useCanTogether();
   const done = (fn: () => void) => () => { fn(); onClose(); };
   const on = !!item.user_data?.watchlisted;
   // Where the ⋯ or card is, so Add to Playlist's list opens where this menu did.
@@ -155,6 +171,7 @@ export function MoreMenu({ item, onMediaInfo, onPlayVersion, onClose, inContinue
         </>
       )}
       {queueable(item) && <PopoverItem icon="list" label={t('playlist.add')} onClick={() => setPicking(true)} />}
+      {canTogether && queueable(item) && <PopoverItem icon="users" label={t('together.menu')} onClick={done(() => void watchTogether(item))} />}
       {onPlayVersion && <PopoverItem icon="film" label={t('details.playVersion')} onClick={onPlayVersion} />}
       {inContinue && <PopoverItem icon="close" label={t('action.removeContinue')} onClick={done(() => void takeOffContinue(item))} />}
       {/* A card on the queue's row: arrange the queue, as the web player's queue list. */}
