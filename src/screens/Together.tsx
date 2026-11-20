@@ -6,9 +6,10 @@ import { t } from '../i18n';
 import { joinRoom, type JoinProblem } from '../lib/together';
 import { CODE_ALPHABET, CODE_LENGTH, formatCode, keyToCodeChar, typeCode } from '../lib/watch-together';
 import { START } from './Home';
+import { RoomCards, useRooms } from '../components/RoomsRow';
 
 // The sidebar's Watch Together page (Android's TogetherPage, after Playlists, when Arc offers
-// Watch Together): Join with a Code. The code is typed with the remote's number keys, or with the
+// Watch Together): Join with a Code, then the Rooms this profile made, was invited to or is in. The code is typed with the remote's number keys, or with the
 // letters and digits on screen (arrows and OK); the dash is added. App opens the room's player.
 
 const ROWS: string[] = [];
@@ -24,6 +25,7 @@ export function TogetherContent({ onReady }: { onReady: () => void }) {
   const [code, setCode] = useState('');
   const [problem, setProblem] = useState<JoinProblem | null>(null);
   const [joining, setJoining] = useState(false);
+  const rooms = useRooms(null);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { onReady(); }, []);
 
@@ -85,6 +87,12 @@ export function TogetherContent({ onReady }: { onReady: () => void }) {
             </div>
           </Container>
         </div>
+        {rooms.length > 0 && (
+          <section className="home-row together-rooms" data-section>
+            <h2 className="row-title" style={{ paddingLeft: START }}>{t('together.rooms')}</h2>
+            <RoomCards rooms={rooms} start={START} width={472} />
+          </section>
+        )}
       </Scroller>
     </div>
   );

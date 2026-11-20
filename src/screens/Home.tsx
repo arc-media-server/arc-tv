@@ -11,6 +11,7 @@ import { formatRuntime, formatTime, t } from '../i18n';
 import { episodeCode, formatLabels, resumeMs } from '../lib/format';
 import { cardFor, loadRow, resolveHomeRows, rowTitle, type Card, type RowSpec } from '../lib/home';
 import { useNav } from '../lib/nav';
+import { RoomCards, useRooms } from '../components/RoomsRow';
 import { queue, queues, upcoming, useOffContinue } from '../lib/store';
 
 // Home, as the Apple TV app's (owner, 31 October): a full-screen hero of featured titles (the
@@ -66,6 +67,9 @@ export function HomeContent({ prefs, libraries, visits, onReady }: { prefs: Pref
   const [label, setLabel] = useState<string | null>(null);
   const q = queue.use();
   const told = useRef(false);
+  // Watch Together rooms waiting for this profile: their own row, first while there are any
+  // (Android and the Apple TV app); not part of the hero.
+  const rooms = useRooms(visits);
 
   const loadOne = useCallback((spec: RowSpec) => {
     loadRow(spec).then(
@@ -173,6 +177,12 @@ export function HomeContent({ prefs, libraries, visits, onReady }: { prefs: Pref
                 {heroes.map((h, i) => <span key={h.key} className={`hero-dot${i === heroAt % heroes.length ? ' on' : ''}`} />)}
               </div>
             )}
+          </section>
+        )}
+        {rooms.length > 0 && (
+          <section className="home-row" data-section data-row="watch-together">
+            <h2 className="row-title" style={{ paddingLeft: START }}>{t('together.rowTitle')}</h2>
+            <RoomCards rooms={rooms} start={START} width={WIDTH.thumb} />
           </section>
         )}
         {visible.map((spec) => {

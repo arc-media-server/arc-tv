@@ -44,6 +44,8 @@ export interface Card {
   sub?: string;
   /** A label over the picture's corner (a home videos folder's "Folder"). */
   tag?: string;
+  /** The tag's icon (a folder unless said). */
+  tagIcon?: string;
 }
 
 type Seasonal = 'romance' | 'horror' | 'christmas';

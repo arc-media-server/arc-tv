@@ -146,7 +146,7 @@ export function MediaCard({ card, look = 'poster', seasonPoster, caption = true,
         data-default={first || undefined}
       >
         {look === 'backdrop' ? <BackdropArt card={shown} /> : shown.mosaic && shown.mosaic.length >= 4 ? <Mosaic paths={shown.mosaic} /> : <Artwork path={art} label={cardTitle(shown)} className={thumb ? 'ratio-16x9' : 'ratio-2x3'} />}
-        {shown.tag && <span className="card-tag"><Icon name="folder" size={20} /> {shown.tag}</span>}
+        {shown.tag && <span className="card-tag"><Icon name={shown.tagIcon ?? 'folder'} size={20} /> {shown.tag}</span>}
         <WatchBadge item={item} />
         <ProgressLine progress={shown.progress} />
       </Pressable>
