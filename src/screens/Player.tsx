@@ -20,6 +20,7 @@ import { audioCodecName, audioTrackName, channelsName, episodeCode, kbpsName, la
 import { useNav } from '../lib/nav';
 import { clearChange, nextInQueue, prefs as loadPrefs, queue, queues, savePrefs } from '../lib/store';
 import { activeCues, chooseSubtitle as pickSubtitle, parseVTT, playableSubtitles, rememberedSubtitleLanguage, subtitleLook, type Cue } from '../lib/subtitles';
+import { adjustable, cueTime, MAX_MS, offsetFor, shifted, STEP_MS, timingKey, timingSeconds, timingWay } from '../lib/subtitle-timing';
 import type { NativePlayer, PlayerCaps } from '../platform/types';
 
 // Full-screen playback with the TV's own player, as the Android app's player: Arc decides direct
@@ -40,7 +41,7 @@ import type { NativePlayer, PlayerCaps } from '../platform/types';
 // Leave. Audio, subtitles, version and quality stay this TV's own.
 
 type Attempt = 'direct' | 'remux' | 'convert';
-type Menu = 'audio' | 'subtitles' | 'version' | 'quality' | 'chapters' | 'speed' | 'info' | null;
+type Menu = 'audio' | 'subtitles' | 'timing' | 'version' | 'quality' | 'chapters' | 'speed' | 'info' | null;
 
 function capsFor(caps: PlayerCaps, attempt: Attempt): PlayerCaps {
   if (attempt === 'remux') return { ...caps, containers: [] };
@@ -192,6 +193,9 @@ function FilmPlayer({ item: start, startMs, entryId, carryOn, fileId, together: 
   const [atEnd, setAtEnd] = useState(false);
   const [next, setNext] = useState<{ item: Item; entryId?: string } | null>(null);
   const [subtitle, setSubtitle] = useState<SubtitleTrack | null>(null);
+  // Subtitle timing by file and track, for this playback only (never saved): another track or file
+  // starts at 0.0s, and going back to one finds its timing as it was.
+  const [subtitleOffsets, setSubtitleOffsets] = useState<Record<string, number>>({});
   const [cues, setCues] = useState<Cue[]>([]);
   const [quality, setQuality] = useState(-1);
   const [speed, setSpeed] = useState(1);
@@ -447,6 +451,9 @@ function FilmPlayer({ item: start, startMs, entryId, carryOn, fileId, together: 
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [itemId]);
+
+  // A new title starts with no subtitle timing.
+  useEffect(() => { setSubtitleOffsets({}); }, [itemId]);
 
   // The chosen subtitle's cues, in file time.
   useEffect(() => {
@@ -746,7 +753,9 @@ function FilmPlayer({ item: start, startMs, entryId, carryOn, fileId, together: 
   const title = item.title;
   const subtitleLine = item.kind === 'episode' ? [item.series_title, episodeCode(item)].filter(Boolean).join(' · ') : item.year ? String(item.year) : '';
   const look = subtitleLook(style);
-  const showing = subtitle ? activeCues(cues, pos) : [];
+  const subtitleOffset = offsetFor(subtitleOffsets, plan?.file_id, subtitle);
+  // A later timing shows each line at its time in the file plus the offset.
+  const showing = subtitle ? activeCues(cues, cueTime(pos, subtitleOffset)) : [];
   const chapters = plan?.chapters ?? [];
   const chapterAt = chapters.reduce((at, c, i) => (c.start_ms <= pos ? i : at), -1);
   const subtitleTracks = playableSubtitles(plan?.subtitle_tracks);
@@ -777,6 +786,15 @@ function FilmPlayer({ item: start, startMs, entryId, carryOn, fileId, together: 
       burn.current = wantBurn;
       void load(position());
     }
+  };
+  /** Show 0.5s Earlier (-STEP_MS), Later (STEP_MS) or Reset (null): at once, with no reload. */
+  const shiftSubtitles = (delta: number | null) => {
+    const p = planRef.current;
+    if (!p || !subtitle || !adjustable(subtitle)) return;
+    const next = shifted(subtitleOffset, delta);
+    if (next === subtitleOffset) return;
+    setSubtitleOffsets((o) => ({ ...o, [timingKey(p.file_id, subtitle.id)]: next }));
+    console.debug(`Arc: subtitle timing now ${next} ms`);
   };
   const chooseQuality = (q: number) => {
     setMenu(null);
@@ -878,7 +896,7 @@ function FilmPlayer({ item: start, startMs, entryId, carryOn, fileId, together: 
                   <span className="ctl-gap" />
                   {s && control('users', t('together.title'), () => setRoomPanel('panel'))}
                   {plan && (plan.audio_tracks ?? []).length > 1 && control('audio', t('player.audio'), () => setMenu('audio'))}
-                  {plan && subtitleTracks.length > 0 && control('captions', t('player.subtitles'), () => setMenu('subtitles'))}
+                  {plan && subtitleTracks.length > 0 && control('captions', t('player.subtitles'), () => setMenu('subtitles'), 'player-subtitles')}
                   {plan && (plan.versions ?? []).length > 1 && control('film', t('player.version'), () => setMenu('version'))}
                   {plan && control('sliders', t('player.quality'), () => setMenu('quality'))}
                   {plan && chapters.length > 1 && control('list', t('player.chapters'), () => setMenu('chapters'))}
@@ -919,11 +937,14 @@ function FilmPlayer({ item: start, startMs, entryId, carryOn, fileId, together: 
           menu={menu}
           plan={plan}
           subtitle={subtitle}
+          subtitleOffset={subtitleOffset}
           quality={quality}
           speed={speed}
           chapterAt={chapterAt}
           caps={caps.current}
           onClose={() => setMenu(null)}
+          onTiming={() => setMenu('timing')}
+          onShiftSubtitles={shiftSubtitles}
           onAudio={chooseAudio}
           onSubtitle={chooseSubtitle}
           onVersion={chooseVersion}
@@ -954,15 +975,18 @@ function FilmPlayer({ item: start, startMs, entryId, carryOn, fileId, together: 
 /** The play/pause button's label follows the state while it has the focus. */
 const PLAY_LABEL = '\u0000play';
 
-function PlayerMenu({ menu, plan, subtitle, quality, speed, chapterAt, caps, onClose, onAudio, onSubtitle, onVersion, onQuality, onChapter, onSpeed }: {
+function PlayerMenu({ menu, plan, subtitle, subtitleOffset, quality, speed, chapterAt, caps, onClose, onTiming, onShiftSubtitles, onAudio, onSubtitle, onVersion, onQuality, onChapter, onSpeed }: {
   menu: Exclude<Menu, null>;
   plan: Playback;
   subtitle: SubtitleTrack | null;
+  subtitleOffset: number;
   quality: number;
   speed: number;
   chapterAt: number;
   caps: PlayerCaps | null;
   onClose: () => void;
+  onTiming: () => void;
+  onShiftSubtitles: (delta: number | null) => void;
   onAudio: (i: number) => void;
   onSubtitle: (s: SubtitleTrack | null) => void;
   onVersion: (id: number) => void;
@@ -990,6 +1014,7 @@ function PlayerMenu({ menu, plan, subtitle, quality, speed, chapterAt, caps, onC
       </Popover>
     );
   }
+  if (menu === 'timing') return <TimingMenu offset={subtitleOffset} onShift={onShiftSubtitles} onClose={onClose} />;
   let title = '';
   let body: string | undefined;
   let options: { key: string; name: string; detail?: string; selected: boolean; pick: () => void }[] = [];
@@ -1007,6 +1032,10 @@ function PlayerMenu({ menu, plan, subtitle, quality, speed, chapterAt, caps, onC
       options = [{ key: 'off', name: t('player.subtitlesOff'), selected: !subtitle, pick: () => onSubtitle(null) }].concat(
         playableSubtitles(plan.subtitle_tracks).map((s, i) => ({ key: s.id, name: subtitleName(s, i), detail: subtitleDetail(s), selected: subtitle?.id === s.id, pick: () => onSubtitle(s) })),
       );
+      // Timing, as the web's and Android's, for the text subtitles shown now; a picture track is
+      // part of the converted video, and the menu says so.
+      if (adjustable(subtitle)) options.push({ key: 'timing', name: t('player.timing'), detail: t('player.timingSeconds', { seconds: timingSeconds(subtitleOffset) }), selected: false, pick: onTiming });
+      else if (subtitle) body = t('player.timingPicture');
       break;
     case 'version':
       title = t('player.version');
@@ -1047,6 +1076,31 @@ function PlayerMenu({ menu, plan, subtitle, quality, speed, chapterAt, caps, onC
       <Scroller className="popover-list" pad={24}>
         {options.map((o) => <PopoverItem key={o.key} icon={o.selected ? 'check' : ''} label={o.name} detail={o.detail} first={o.key === firstKey} onClick={o.pick} />)}
       </Scroller>
+    </Popover>
+  );
+}
+
+/**
+ * Subtitle Timing: where the lines are now, then Show 0.5s Earlier, Show 0.5s Later and Reset. Each
+ * press shows at once and the menu stays open, so a line can be matched by eye. The choices stay
+ * put (the focus mustn't lose its row): at ±10s, or at 0.0s for Reset, they're dimmed and do
+ * nothing. Back returns the focus to the Subtitles button.
+ */
+function TimingMenu({ offset, onShift, onClose }: { offset: number; onShift: (delta: number | null) => void; onClose: () => void }) {
+  // At the top of the screen, right edge level with the Subtitles button: over the button it would
+  // cover the very lines being matched (they sit just above the controls).
+  const [from] = useState(() => {
+    const r = document.querySelector('[data-spotlight-id="player-subtitles"]')?.getBoundingClientRect();
+    return r ? ({ left: r.left, right: r.right, width: r.width, top: 0, bottom: 20, height: 20 } as ClientRect) : undefined;
+  });
+  const way = timingWay(offset);
+  const seconds = timingSeconds(offset);
+  const body = way === 'later' ? t('player.timingLater', { seconds }) : way === 'earlier' ? t('player.timingEarlier', { seconds }) : t('player.timingZero');
+  return (
+    <Popover place="below" shade={false} from={from} title={t('player.timingTitle')} body={body} onClose={onClose}>
+      <PopoverItem first icon="" label={t('player.timingShowEarlier')} dim={offset <= -MAX_MS} onClick={() => onShift(-STEP_MS)} />
+      <PopoverItem icon="" label={t('player.timingShowLater')} dim={offset >= MAX_MS} onClick={() => onShift(STEP_MS)} />
+      <PopoverItem icon="" label={t('player.timingReset')} dim={offset === 0} onClick={() => onShift(null)} />
     </Popover>
   );
 }
