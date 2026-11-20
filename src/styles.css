@@ -278,15 +278,13 @@ p { margin: 0 0 16px; }
 /* Home */
 .home { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; }
 .home-page { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; }
-/* The hero fills the screen but for the first row's titles peeking in below it. */
-.home-hero { position: relative; height: 900px; padding: 0 192px; display: flex; flex-direction: column; justify-content: flex-end; }
+/* The focused title's hero, with the first row's titles in full just under it, posters too (Android's is 60%). */
+.home-hero { height: 540px; padding: 0 192px 28px; display: flex; flex-direction: column; justify-content: flex-end; }
 .home-hero-text { max-width: 1040px; }
-.home-hero-meta { margin-top: 20px; }
-.home-hero-overview { margin-top: 14px; }
-.home-hero-actions .actions { margin-top: 32px; }
-.home-hero-dots { position: absolute; left: 0; right: 0; bottom: 30px; display: flex; flex-direction: row; justify-content: center; }
-.hero-dot { width: 12px; height: 12px; border-radius: 6px; margin: 0 6px; background: rgba(255, 255, 255, 0.35); transition: width 0.3s, background-color 0.3s; }
-.hero-dot.on { width: 32px; background: #fff; }
+.home-hero .title-logo { max-width: 640px; height: 160px; }
+.home-hero .title-name { max-height: 160px; }
+.home-hero-meta { margin-top: 16px; }
+.home-hero-overview { margin-top: 12px; }
 .home-row { padding-top: 12px; }
 .row-title { font-size: 34px; font-weight: 600; margin: 0 0 4px; }
 .row-loading { height: 200px; display: flex; align-items: center; }
@@ -434,15 +432,15 @@ p { margin: 0 0 16px; }
 .details-hero .title-logo { max-width: 760px; height: 200px; }
 .details-hero .title-name { font-size: 80px; max-height: 200px; }
 .hero-episode { margin-top: 16px; font-size: 32px; font-weight: 600; }
-.hero-row { display: flex; flex-direction: row; align-items: flex-start; margin-top: 36px; }
-.hero-actions { flex: 0 0 auto; }
+/* The description under the logo, then the buttons (as Android and the Apple TV app). */
+.hero-about { max-width: 1100px; margin-top: 24px; }
+.hero-actions { margin-top: 28px; }
 .hero-actions .actions { margin-top: 0; }
-.hero-about { flex: 1 1 auto; margin-left: 40px; min-width: 0; padding-top: 4px; }
 .hero-overview {
   margin: 0; font-size: 26px; line-height: 1.4; color: rgba(245, 245, 247, 0.85);
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; max-height: 110px;
 }
-.hero-about.can-open { transition: transform 0.2s, background-color 0.2s; border-radius: 16px; padding: 10px 14px; margin: -10px -14px -10px 26px; }
+.hero-about.can-open { transition: transform 0.2s, background-color 0.2s; border-radius: 16px; padding: 10px 14px; margin: 14px 0 -10px -14px; }
 .hero-about.can-open.spottable:focus { background: rgba(255, 255, 255, 0.14); box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35); transform: scale(1.02); }
 .about-text.spottable:focus { box-shadow: none; }
 .hero-more { display: block; font-size: 20px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #fff; margin-top: 2px; }
