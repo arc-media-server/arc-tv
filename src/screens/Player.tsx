@@ -16,7 +16,7 @@ import { Button, Container, focusElement, Focusable, Trap } from '../components/
 import { formatTime, t } from '../i18n';
 import { toast } from '../lib/toast';
 import { useBack } from '../lib/back';
-import { audioCodecName, audioTrackName, channelsName, episodeCode, kbpsName, languageName, sameLanguage, videoCodecName } from '../lib/format';
+import { audioCodecName, audioTrackName, channelsName, episodeHeading, kbpsName, languageName, sameLanguage, videoCodecName } from '../lib/format';
 import { useNav } from '../lib/nav';
 import { clearChange, nextInQueue, prefs as loadPrefs, queue, queues, savePrefs } from '../lib/store';
 import { activeCues, chooseSubtitle as pickSubtitle, parseVTT, playableSubtitles, rememberedSubtitleLanguage, subtitleLook, type Cue } from '../lib/subtitles';
@@ -750,8 +750,9 @@ function FilmPlayer({ item: start, startMs, entryId, carryOn, fileId, together: 
 
   const duration = plan?.duration_ms ?? 0;
   const shown = scrub ?? pos;
-  const title = item.title;
-  const subtitleLine = item.kind === 'episode' ? [item.series_title, episodeCode(item)].filter(Boolean).join(' · ') : item.year ? String(item.year) : '';
+  // An episode: the show above, then "S1 · E4 · Pilot".
+  const title = item.kind === 'episode' ? episodeHeading(item) : item.title;
+  const subtitleLine = item.kind === 'episode' ? item.series_title ?? '' : item.year ? String(item.year) : '';
   const look = subtitleLook(style);
   const subtitleOffset = offsetFor(subtitleOffsets, plan?.file_id, subtitle);
   // A later timing shows each line at its time in the file plus the offset.
@@ -1119,8 +1120,8 @@ function UpNext({ next: original, seconds, onPlay, onCancel }: { next: Item; sec
       <Artwork path={card.thumb} label={next.title} className="ratio-16x9 up-next-art" />
       <div className="up-next-text">
         <div className="muted small-caps">{seconds === 1 ? t('player.upNextInOne') : t('player.upNextIn', { n: seconds })}</div>
-        <div className="up-next-title">{next.title}</div>
-        <div className="muted">{[next.series_title, next.kind === 'episode' ? episodeCode(next) : ''].filter(Boolean).join(' · ')}</div>
+        <div className="up-next-title">{next.kind === 'episode' ? episodeHeading(next) : next.title}</div>
+        {next.kind === 'episode' && next.series_title && <div className="muted">{next.series_title}</div>}
         <Container className="inline">
           <Button className="primary" data-default onClick={onPlay}><Icon name="play" size={22} /> {t('player.playNow')}</Button>
           <Button onClick={onCancel}>{t('common.cancel')}</Button>

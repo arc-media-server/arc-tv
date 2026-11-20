@@ -16,7 +16,8 @@
     "test:theme-music": "node scripts/test-theme-music.mjs",
     "test:watch-together": "node scripts/test-watch-together.mjs",
     "test:subtitle-timing": "node scripts/test-subtitle-timing.mjs",
-    "check": "tsc -b && npm run test:watch-together && npm run test:subtitle-timing && npm run build:webos && npm run build:tizen && node scripts/check-bundle.mjs"
+    "test:episode-numbers": "node scripts/test-episode-numbers.mjs",
+    "check": "tsc -b && npm run test:watch-together && npm run test:subtitle-timing && npm run test:episode-numbers && npm run build:webos && npm run build:tizen && node scripts/check-bundle.mjs"
   },
   "dependencies": {
     "@enact/core": "^5.6.0",
