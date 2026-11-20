@@ -1,7 +1,8 @@
 // Live updates: one stream per foreground profile, independent of screen/player lifetimes.
 import { useEffect, useRef } from 'react';
 import { serverURL } from '../api';
-import { LiveUpdates, touches } from './live-hints';
+import { LiveUpdates, liveTopics, touches } from './live-hints';
+import { refreshRooms } from './together';
 import { invalidatePrefs } from './store';
 const listeners = new Set<(topics: Set<string>) => void>();
 export function useLiveUpdates(profile: string | undefined, enabled: boolean) {
@@ -9,6 +10,8 @@ export function useLiveUpdates(profile: string | undefined, enabled: boolean) {
     if (!profile || !enabled) return;
     const stream = new LiveUpdates(serverURL('/events'), localStorage.getItem('arc.token') ?? '', (topics) => {
       if (touches(topics, ['profile'])) invalidatePrefs();
+      // The rooms list is small and app-wide (Home's row, the Watch Together page): read it at once.
+      if (touches(topics, liveTopics.together)) void refreshRooms();
       listeners.forEach((fn) => fn(topics));
     });
     const visibility = () => { if (document.visibilityState === 'hidden') stream.stop(); else stream.start(); };

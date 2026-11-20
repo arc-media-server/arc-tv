@@ -349,6 +349,35 @@ try {
     h.s.stop();
   });
 
+  await test('invitations: who can be chosen', () => {
+    const jo = { id: 'a', name: 'Jo', friend: false, can_watch: true };
+    const kim = { id: 'k', name: 'Kim', friend: true, can_watch: true };
+    const lee = { id: 'l', name: 'Lee', friend: true, can_watch: false };
+    assert.equal(W.personDetail(jo), 'household');
+    assert.equal(W.personDetail(kim), 'friend');
+    assert.equal(W.personDetail(lee), 'cantWatch');
+    let chosen = W.toggleChosen([], kim);
+    assert.deepEqual(chosen, ['k']);
+    chosen = W.toggleChosen(chosen, lee); // can't watch: never chosen
+    assert.deepEqual(chosen, ['k']);
+    chosen = W.toggleChosen(W.toggleChosen(chosen, jo), kim);
+    assert.deepEqual(chosen, ['a']);
+    // Inviting more from inside a room: those in it, or invited by name already, aren't offered.
+    // Participants' ids are memberships, not profiles: Jo is in the room under another id.
+    const r = room({ participants: [{ id: 'm9', name: 'Jo', available: true, ready: true, state: 'paused' }], invited: [{ name: 'Kim' }] });
+    assert.deepEqual(W.offerable([jo, kim, lee], r).map((p) => p.id), ['l']);
+    assert.equal(W.offerable([jo, kim], null).length, 2);
+  });
+
+  await test('invitations: a listed room\'s actions', () => {
+    const listed = (o) => ({ id: 'r', state: 'paused', position_ms: 0, created_at_ms: 0, host_name: 'Jo', hosting: false, joined: false, item: { id: 'm1', title: 'Film', kind: 'movie' }, participants: [], invited: ['Sam'], ...o });
+    assert.deepEqual(W.roomActions(listed({})), { main: 'join', other: 'decline' });
+    assert.deepEqual(W.roomActions(listed({ hosting: true })), { main: 'join', other: 'cancel' });
+    assert.deepEqual(W.roomActions(listed({ joined: true, hosting: true })), { main: 'return', other: 'cancel' });
+    assert.deepEqual(W.roomPeople(listed({ participants: ['Jo'] })), { here: ['Jo'], invited: ['Sam'] });
+    assert.deepEqual(W.roomPeople(listed({ participants: undefined, invited: undefined })), { here: [], invited: [] });
+  });
+
   console.log(`watch together: ${passed} tests passed`);
 } finally {
   rmSync(compiled, { recursive: true, force: true });

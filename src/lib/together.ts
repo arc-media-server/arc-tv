@@ -8,7 +8,7 @@ import { api, ApiError, enc, serverURL, type Item, type SeasonsResponse } from '
 import { nextEpisode, resumeMs } from './format';
 import { RoomSession, type RoomEnd } from './room-session';
 import { canUse } from './store';
-import { normalizeCode, type WatchInvite, type WatchRoom } from './watch-together';
+import { normalizeCode, type ListedRoom, type WatchInvite, type WatchPerson, type WatchRoom } from './watch-together';
 
 function store<T>(initial: T) {
   let value = initial;
@@ -28,6 +28,9 @@ function store<T>(initial: T) {
 /** The code to share for the room this TV made, and when it runs out (epoch ms). */
 export interface RoomCode { roomId: string; code: string; expiresAtMs: number }
 
+/** A room on Home's Watch Together row, with its title in full for the card's artwork (null until fetched, or if it can't be). */
+export interface RoomEntry { room: ListedRoom; item: Item | null }
+
 export const together = {
   /** This TV's membership, while it's in a room. */
   session: store<RoomSession | null>(null),
@@ -38,6 +41,8 @@ export const together = {
   ended: store<RoomEnd | null>(null),
   /** Whether the room's stream is open (false while reconnecting). */
   connected: store(true),
+  /** Rooms this profile made, was invited to or is in (GET /rooms): Home's Watch Together row. */
+  rooms: store<RoomEntry[]>([]),
 };
 
 /** Whether this server has Watch Together and this profile may use it. */
@@ -105,6 +110,7 @@ export async function startRoom(item: Item, startMs: number): Promise<boolean> {
     together.code.set({ roomId: invite.room.id, code: invite.invite_code, expiresAtMs: invite.invite_expires_at_ms });
     log('info', 'Arc: watch together: started a room');
     begin(invite.room, true);
+    void refreshRooms();
     return true;
   } catch (e) {
     log('warn', `Arc: watch together: starting a room failed (${statusOf(e)})`);
@@ -134,6 +140,7 @@ export async function joinRoom(code: string): Promise<JoinProblem | null> {
     together.code.set(null);
     log('info', 'Arc: watch together: joined with a code');
     begin(room);
+    void refreshRooms();
     return null;
   } catch (e) {
     const status = e instanceof ApiError ? e.status : 0;
@@ -166,6 +173,7 @@ export async function leaveRoom() {
   together.ended.set(null);
   await s.leave();
   log('info', 'Arc: watch together: left the room');
+  void refreshRooms();
 }
 
 /** Ends the room for everyone (host only). */
@@ -203,4 +211,132 @@ export function resetTogether() {
   together.code.set(null);
   together.ended.set(null);
   together.connected.set(true);
+  together.rooms.set([]);
+  items.clear();
+}
+
+// --- Invitations (Android's Together.invite/accept/dismiss, the web's invite picker and Home row) ---
+
+/** Each listed room's title, fetched once for the card's artwork. */
+const items = new Map<string, Item>();
+let listing: Promise<void> | null = null;
+let again = false;
+
+/**
+ * Reads the rooms list again: on Home, the Watch Together page, after this TV starts, joins or
+ * leaves a room, and when Arc's `watch_together` hint says the list changed. A failure keeps
+ * what's shown (the row is a convenience, not a page of its own).
+ */
+export function refreshRooms(): Promise<void> {
+  if (listing) { again = true; return listing; }
+  listing = (async () => {
+    if (!(await canTogether())) { together.rooms.set([]); return; }
+    try {
+      const list = await api<{ rooms?: ListedRoom[] }>('/watch-together/rooms');
+      const rooms = (list?.rooms ?? []).filter((r) => r && r.id && r.item && r.state !== 'ended');
+      const entries = await Promise.all(rooms.map(async (room): Promise<RoomEntry> => {
+        let item = items.get(room.item.id) ?? null;
+        if (!item) {
+          item = await api<Item>(`/items/${enc(room.item.id)}`).catch(() => null);
+          if (item) items.set(room.item.id, item);
+        }
+        return { room, item };
+      }));
+      together.rooms.set(entries);
+    } catch (e) {
+      log('info', `Arc: watch together: the rooms list didn't load (${statusOf(e)})`);
+    }
+  })().finally(() => {
+    listing = null;
+    if (again) { again = false; void refreshRooms(); }
+  });
+  return listing;
+}
+
+/** Who this profile may invite to watch `itemId` (with whether each may play it); null when the list didn't load. */
+export async function invitePeople(itemId?: string): Promise<WatchPerson[] | null> {
+  try {
+    const res = await api<{ people?: WatchPerson[] }>(`/watch-together/people${itemId ? `?item_id=${enc(itemId)}` : ''}`);
+    return res?.people ?? [];
+  } catch (e) {
+    log('warn', `Arc: watch together: who to invite didn't load (${statusOf(e)})`);
+    return null;
+  }
+}
+
+export type InviteResult = 'done' | 'tooMany' | 'failed';
+
+/**
+ * A room for `item` made for the people chosen, as the web's and Android's Done: nobody's in it
+ * yet, this profile included, and it waits on everyone's Home under Watch Together. The code that
+ * comes with it is kept, so the lobby shows it if this TV joins as host.
+ */
+export async function inviteRoom(item: Item, startMs: number, profileIds: string[]): Promise<{ result: InviteResult; room?: ListedRoom }> {
+  try {
+    const made = await api<{ room: ListedRoom; invite_code?: string; invite_expires_at_ms?: number }>('/watch-together/rooms', {
+      method: 'POST',
+      body: { item_id: item.id, start_ms: Math.max(0, Math.round(startMs)), profile_ids: profileIds },
+    });
+    if (made.invite_code && !together.session.get()) together.code.set({ roomId: made.room.id, code: made.invite_code, expiresAtMs: made.invite_expires_at_ms ?? 0 });
+    items.set(item.id, item);
+    log('info', `Arc: watch together: made a room for ${profileIds.length} invited`);
+    void refreshRooms();
+    return { result: 'done', room: made.room };
+  } catch (e) {
+    log('warn', `Arc: watch together: inviting failed (${statusOf(e)})`);
+    return { result: e instanceof ApiError && e.status === 429 ? 'tooMany' : 'failed' };
+  }
+}
+
+/** Invites more people to the room this TV hosts (the lobby's and the panel's Invite People…). */
+export async function inviteMore(profileIds: string[]): Promise<InviteResult> {
+  const s = together.session.get();
+  if (!s) return 'failed';
+  try {
+    await s.inviteMore(profileIds);
+    log('info', `Arc: watch together: invited ${profileIds.length} more`);
+    return 'done';
+  } catch (e) {
+    log('warn', `Arc: watch together: inviting more failed (${statusOf(e)})`);
+    return 'failed';
+  }
+}
+
+/** Join (or Return to) a room from the list, without a code; false if Arc refused. */
+export async function acceptRoom(roomId: string): Promise<boolean> {
+  const current = together.session.get();
+  if (current && current.room.id === roomId) {
+    together.room.set(current.room); // Return: App reopens the player on it
+    return true;
+  }
+  await leaveRoom(); // one room at a time
+  try {
+    const room = await api<WatchRoom>(`/watch-together/rooms/${enc(roomId)}/join`, { method: 'POST' });
+    const code = together.code.get();
+    if (code && code.roomId !== roomId) together.code.set(null);
+    log('info', 'Arc: watch together: joined a room from the list');
+    // A room this profile made and nobody has started yet keeps its lobby, as one started here.
+    begin(room, room.host_id === room.self_id);
+    void refreshRooms();
+    return true;
+  } catch (e) {
+    log('warn', `Arc: watch together: joining a room failed (${statusOf(e)})`);
+    void refreshRooms();
+    return false;
+  }
+}
+
+/** Declines an invitation, or (its maker) cancels the room for everyone. */
+export async function dismissRoom(roomId: string): Promise<boolean> {
+  let ok = true;
+  try {
+    await api(`/watch-together/rooms/${enc(roomId)}/dismiss`, { method: 'POST' });
+    log('info', 'Arc: watch together: declined or cancelled a room');
+  } catch (e) {
+    ok = false;
+    log('warn', `Arc: watch together: declining failed (${statusOf(e)})`);
+  }
+  if (ok) together.rooms.set(together.rooms.get().filter((r) => r.room.id !== roomId));
+  void refreshRooms();
+  return ok;
 }

@@ -20,6 +20,9 @@ for (let i = 0; i < 10000; i += 500) { tick(i); batch.add('catalog'); batch.add(
 tick(12000);
 assert.deepEqual(flushes, [[1500, ['catalog']], [6500, ['catalog']], [11500, ['catalog']]]);
 batch.add('profile'); batch.stop(); tick(20000); assert.equal(flushes.length, 3);
+// Watch Together's rooms hint is a known topic, so Home's row hears about room changes.
+batch.add('watch_together'); tick(40000); assert.deepEqual(flushes[3], [21500, ['watch_together']]);
+assert.ok(touches(new Set(['watch_together']), ['watch_together']));
 Date.now = real.now; globalThis.setTimeout = real.setTimeout; globalThis.clearTimeout = real.clearTimeout;
 console.log('SSE fragments/CRLF/IDs, targeted topics, scan batching, unknown hints and stop passed');
 // This HTTP-backed XHR double feeds progressive chunks through the production transport.

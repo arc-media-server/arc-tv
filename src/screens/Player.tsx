@@ -1,4 +1,5 @@
 import { useSpoilerItem } from '../lib/useSpoilers';
+import { InvitePicker } from '../components/InvitePicker';
 import { EndedPane, LeaveConfirm, RoomCard, RoomPill, useRoomNotice, WaitingPill } from '../components/Together';
 import { endRoom, leaveRoom, together } from '../lib/together';
 import { correction, following, hosting, keepNudging, startedOnce } from '../lib/watch-together';
@@ -11,7 +12,7 @@ import { cardFor } from '../components/Cards';
 import { Icon } from '../components/Icon';
 import { Popover, PopoverItem } from '../components/Menu';
 import { Scroller } from '../components/Scroller';
-import { Button, Container, Focusable, Trap } from '../components/spot';
+import { Button, Container, focusElement, Focusable, Trap } from '../components/spot';
 import { formatTime, t } from '../i18n';
 import { toast } from '../lib/toast';
 import { useBack } from '../lib/back';
@@ -225,7 +226,7 @@ function FilmPlayer({ item: start, startMs, entryId, carryOn, fileId, together: 
   const relation = room ? following(room, itemId) : null;
   const inLobby = !!room && relation === 'follow' && !lobbyDone;
   const hostingRoom = !!room && hosting(room);
-  const [roomPanel, setRoomPanel] = useState<'panel' | 'confirm' | null>(null);
+  const [roomPanel, setRoomPanel] = useState<'panel' | 'confirm' | 'invite' | null>(null);
   const [endedPane, setEndedPane] = useState(false);
   const [lostNote, setLostNote] = useState('');
   const notice = useRoomNotice(room);
@@ -933,9 +934,18 @@ function FilmPlayer({ item: start, startMs, entryId, carryOn, fileId, together: 
       )}
       {shownNext && upNextIn !== null && <UpNext next={shownNext.item} seconds={upNextIn} onPlay={playNext} onCancel={cancelUpNext} />}
       {room && (inLobby || roomPanel === 'panel') && (
-        <RoomCard room={room} lobby={inLobby} onStart={() => roomCommand((x) => x.play())} onLeave={askLeave} onEnd={endForEveryone} onClose={() => setRoomPanel(null)} />
+        <RoomCard
+          room={room}
+          lobby={inLobby}
+          onStart={() => roomCommand((x) => x.play())}
+          onLeave={askLeave}
+          onEnd={endForEveryone}
+          onClose={() => setRoomPanel(null)}
+          extra={hostingRoom && <Button className="room-invite" onClick={() => setRoomPanel('invite')}>{t('together.invitePeople')}</Button>}
+        />
       )}
-      {room && roomPanel === 'confirm' && <LeaveConfirm onLeave={() => leave(inLobby)} onStay={() => setRoomPanel(inLobby ? null : 'panel')} />}
+      {room && roomPanel === 'invite' && <InvitePicker onClose={() => { setRoomPanel(inLobby ? null : 'panel'); if (inLobby) refocusLobby('.room-invite'); }} />}
+      {room && roomPanel === 'confirm' && <LeaveConfirm onLeave={() => leave(inLobby)} onStay={() => { setRoomPanel(inLobby ? null : 'panel'); if (inLobby) refocusLobby('.room-leave'); }} />}
       {endedPane && <EndedPane onContinue={() => setEndedPane(false)} onClose={() => { setEndedPane(false); nav.back(); }} />}
     </div>
   );
@@ -1125,4 +1135,16 @@ export function ExtraPlayer({ extra }: { extra: Extra }) {
       </div>
     </div>
   );
+}
+
+/**
+ * A popover over the lobby (Invite People…, the host's Leave question) closed: the lobby stayed
+ * open under it, so the focus goes back to the button that opened it. The popover's own return
+ * skips past the lobby (it's a panel too), to whatever opened the player.
+ */
+function refocusLobby(selector: string) {
+  window.setTimeout(() => {
+    const el = document.querySelector(`.room-card ${selector}`) ?? document.querySelector('.room-card .spottable');
+    if (el) focusElement(el);
+  }, 50);
 }

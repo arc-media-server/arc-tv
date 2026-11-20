@@ -3,6 +3,8 @@ export const liveTopics = {
   home: ['catalog', 'library', 'profile', 'playback', 'artwork'],
   title: ['catalog', 'profile', 'playback', 'artwork', 'optimized', 'previews'],
   prefs: ['profile'],
+  /** Watch Together's rooms list (Home's row): a room made, invited to, joined, left, declined or ended. */
+  together: ['watch_together'],
 };
 export function touches(topics: Set<string>, wanted: readonly string[]) {
   return topics.has('resync') || wanted.some((topic) => topics.has(topic));
