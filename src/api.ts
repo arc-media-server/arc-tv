@@ -191,6 +191,8 @@ export interface Prefs {
   audio_language?: string;
   auto_play?: boolean;
   auto_skip?: boolean;
+  /** List a show's episodes that aren't on disk (off unless turned on). */
+  show_missing_episodes?: boolean;
   subtitle_style?: { size?: string; color?: string; background?: string; position?: string };
 }
 

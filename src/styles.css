@@ -362,8 +362,6 @@ p { margin: 0 0 16px; }
 .seasons { padding-top: 8px; }
 /* The season tabs, then the season's actions on the same line (no flex gap: Chrome 53). */
 .season-bar { display: flex; flex-direction: row; align-items: center; margin-bottom: 4px; }
-.season-actions { margin-left: 12px; }
-.season-actions .btn .icon { margin-right: 12px; }
 .unplaced-note { font-size: 24px; margin: 16px 0 0; max-width: 1400px; }
 .episode-card { width: 400px; }
 .episode-kicker { font-size: 18px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }

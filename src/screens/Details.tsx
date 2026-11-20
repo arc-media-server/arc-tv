@@ -16,7 +16,7 @@ import { MediaInfo, MoreMenu, toggleWatched, toggleWatchlist, useCanQueue } from
 import { formatRuntime, formatTime, t } from '../i18n';
 import { episodeCode, formatLabels, languageName, nextEpisode, resumeMs, versionLabel, versionsOf, watched } from '../lib/format';
 import { useActive, useNav } from '../lib/nav';
-import { queues, setSeasonPlayed, useChanges, withChanges } from '../lib/store';
+import { prefs, queues, setSeasonPlayed, useChanges, withChanges } from '../lib/store';
 import { shuffled, usePlayAll } from '../lib/playAll';
 import { toast } from '../lib/toast';
 // Theme music
@@ -113,11 +113,15 @@ function episodeTabs(seasons: Season[], unplaced: Item[]): EpisodeTab[] {
 }
 
 /**
- * The seasons as tabs (then Not in This Order) with the chosen tab's episodes under them. Beside
- * the tabs, as on the web's show page: Shuffle Season and Mark Season as Watched (or Unwatched),
- * for a season shown; Not in This Order isn't a season, so it has no season actions.
+ * The seasons as tabs (then Not in This Order) with the chosen tab's episodes under them. OK on a
+ * season's tab opens its menu, as on Android and in Kodi: Shuffle Season and Mark Season as
+ * Watched (or Unwatched). Not in This Order isn't a
+ * season, so it has no menu. Missing episodes follow the profile's Show Missing Episodes setting.
  */
-function Seasons({ seriesId, tabs, orderName, initial, focusId, canQueue, showMissing, onToggleMissing, onPlay, onSeasonMarked }: {
+/** A season's menu, drawn by the page over everything (outside the scrolling page, as the cards' menus are). */
+interface SeasonMenu { title: string; canShuffle: boolean; watched: boolean; shuffle: () => void; mark: () => void }
+
+function Seasons({ seriesId, tabs, orderName, initial, focusId, canQueue, onPlay, onSeasonMarked, onMenu }: {
   seriesId: string;
   tabs: EpisodeTab[];
   orderName?: string;
@@ -126,22 +130,22 @@ function Seasons({ seriesId, tabs, orderName, initial, focusId, canQueue, showMi
   canQueue: boolean;
   onPlay: (ep: Item) => void;
   onSeasonMarked: () => void;
-  showMissing: boolean;
-  onToggleMissing: () => void;
+  onMenu: (menu: SeasonMenu) => void;
 }) {
   const [selectedKey, setSelectedKey] = useState(tabs[initial]?.key);
   const selected = Math.max(0, tabs.findIndex((x) => x.key === selectedKey));
   const changes = useChanges();
   const playAll = usePlayAll(t('details.seasonPlayFailed'));
-  if (!tabs.length) return <section style={{ paddingLeft: PAGE_START }}>
-    <p className="muted">{t('details.noEpisodes')}</p>
-    <Button className="small" onClick={onToggleMissing}>{t(showMissing ? 'details.hideMissing' : 'details.showMissing')}</Button>
-  </section>;
+  if (!tabs.length) return <section style={{ paddingLeft: PAGE_START }}><p className="muted">{t('details.noEpisodes')}</p></section>;
   const tab = tabs[Math.min(selected, tabs.length - 1)];
   const episodes = tab.episodes.map((e) => withChanges(e, changes));
   const onDisk = tab.unplaced ? [] : episodes.filter((e) => e.available !== false);
   const seasonWatched = onDisk.length > 0 && onDisk.every((e) => e.user_data?.played);
+  const canShuffle = canQueue && onDisk.length > 1;
+  // A season of only missing episodes has nothing to shuffle or mark, so no menu.
+  const hasMenu = tab.seasonNumber !== undefined && onDisk.length > 0;
   const shuffleSeason = () => void playAll(() => queues.start(shuffled(onDisk).map((e) => e.id)), false);
+  const openMenu = () => onMenu({ title: tab.name, canShuffle, watched: seasonWatched, shuffle: shuffleSeason, mark: markSeason });
   const markSeason = () => {
     if (tab.seasonNumber === undefined) return;
     setSeasonPlayed(seriesId, tab.seasonNumber, onDisk, !seasonWatched).then(onSeasonMarked, () => toast(t('action.watchedFailed')));
@@ -151,20 +155,19 @@ function Seasons({ seriesId, tabs, orderName, initial, focusId, canQueue, showMi
       <div className="season-bar" style={{ marginLeft: PAGE_START - 16 }}>
         <Container className="tabs">
           {tabs.map((x, i) => (
-            <Focusable key={x.key} className={`tab${i === selected ? ' selected' : ''}`} onFocus={() => setSelectedKey(x.key)} onClick={() => setSelectedKey(x.key)}>
+            <Pressable
+              key={x.key}
+              className={`tab${i === selected ? ' selected' : ''}`}
+              onFocus={() => setSelectedKey(x.key)}
+              // The tab is selected as it takes the focus, so OK (or holding it) opens the focused
+              // tab's menu, as on Android and in Kodi.
+              onClick={() => { setSelectedKey(x.key); if (x.key === tab.key && hasMenu) openMenu(); }}
+              onHold={x.key === tab.key && hasMenu ? openMenu : undefined}
+            >
               {x.name}
-            </Focusable>
+            </Pressable>
           ))}
         </Container>
-        <Container className="head-buttons season-actions">
-            <Button className="small" onClick={onToggleMissing}>{t(showMissing ? 'details.hideMissing' : 'details.showMissing')}</Button>
-            {canQueue && onDisk.length > 1 && (
-              <Button className="small" onClick={shuffleSeason}><Icon name="shuffle" size={26} /> {t('details.shuffleSeason')}</Button>
-            )}
-            {onDisk.length > 0 && <Button className="small" onClick={markSeason}>
-              <Icon name={seasonWatched ? 'circleCheck' : 'check'} size={26} /> {t(seasonWatched ? 'details.seasonUnwatched' : 'details.seasonWatched')}
-            </Button>}
-          </Container>
       </div>
       {tab.unplaced && (
         <p className="muted unplaced-note" style={{ paddingLeft: PAGE_START }}>
@@ -227,38 +230,34 @@ export function Details({ id, episodeId }: { id: string; episodeId?: string }) {
   const [base, setBase] = useState<Item | null>(null);
   const [seasons, setSeasons] = useState<Season[] | null>(null);
   const [unplaced, setUnplaced] = useState<Item[]>([]);
-  const [showMissing, setShowMissing] = useState(false);
-  const missingChoice = useRef(false);
   const seasonsRequest = useRef(0);
   const [orderName, setOrderName] = useState<string | undefined>(undefined);
   const [related, setRelated] = useState<Related[]>([]);
   const [error, setError] = useState('');
   const [scrolled, setScrolled] = useState(false);
   const [panel, setPanel] = useState<'more' | 'info' | 'version' | null>(null);
+  const [seasonMenu, setSeasonMenu] = useState<SeasonMenu | null>(null);
   const [label, setLabel] = useState<string | null>(null);
   const changes = useChanges();
   const canQueue = useCanQueue();
 
-  const loadSeasons = useCallback(async (missing: boolean) => {
+  // Missing episodes (not on disk) are listed when the profile's Show Missing Episodes setting is on.
+  const loadSeasons = useCallback(async () => {
     const request = ++seasonsRequest.current;
+    const missing = !!(await prefs()).show_missing_episodes;
     const s = await api<SeasonsResponse>(`/series/${encodeURIComponent(id)}/seasons${missing ? '?missing=1' : ''}`);
     if (request !== seasonsRequest.current) return;
-    missingChoice.current = missing;
-    setShowMissing(missing);
     setSeasons((s.seasons ?? []).filter((x) => x.episodes && x.episodes.length));
     setUnplaced(s.unplaced ?? []);
     setOrderName(s.ordering?.name || undefined);
   }, [id]);
   useEffect(() => () => { ++seasonsRequest.current; }, [id]);
-  const toggleMissing = () => {
-    void loadSeasons(!missingChoice.current).catch(() => toast(t('details.episodesFailed')));
-  };
 
   const load = useCallback((quiet: boolean) => {
     if (!quiet) setError('');
     api<Item>(`/items/${encodeURIComponent(id)}`).then(async (it) => {
       if (it.kind === 'series') {
-        await loadSeasons(missingChoice.current);
+        await loadSeasons();
       }
       setBase(it);
       if (it.kind === 'episode') return;
@@ -276,7 +275,9 @@ export function Details({ id, episodeId }: { id: string; episodeId?: string }) {
 
   useEffect(() => { load(false); }, [load]);
   // Live updates: preserve the title and focused menu while hints arrive.
-  useLiveRefresh(liveTopics.title, active && panel === null, () => load(true));
+  useLiveRefresh(liveTopics.title, active && panel === null && !seasonMenu, () => load(true));
+  // The profile's settings changed elsewhere (Show Missing Episodes among them).
+  useLiveRefresh(liveTopics.prefs, active && panel === null && !seasonMenu, () => load(true));
 
   // Coming back from the player: the new resume point and watched state.
   const wasActive = useRef(active);
@@ -383,10 +384,9 @@ export function Details({ id, episodeId }: { id: string; episodeId?: string }) {
             initial={initialSeason}
             focusId={focusEp?.id}
             canQueue={canQueue}
-            showMissing={showMissing}
-            onToggleMissing={toggleMissing}
             onPlay={(ep) => { if (ep.available !== false) nav.play(ep, resumeMs(ep)); }}
             onSeasonMarked={() => load(true)}
+            onMenu={setSeasonMenu}
           />
         )}
         {cast.length > 0 && (
@@ -406,6 +406,17 @@ export function Details({ id, episodeId }: { id: string; episodeId?: string }) {
         )}
         <InfoSection item={item} />
       </Scroller>
+      {seasonMenu && (
+        <Popover title={seasonMenu.title} onClose={() => setSeasonMenu(null)}>
+          {seasonMenu.canShuffle && <PopoverItem first icon="shuffle" label={t('details.shuffleSeason')} onClick={() => { setSeasonMenu(null); seasonMenu.shuffle(); }} />}
+          <PopoverItem
+            first={!seasonMenu.canShuffle}
+            icon={seasonMenu.watched ? 'circleCheck' : 'check'}
+            label={t(seasonMenu.watched ? 'details.seasonUnwatched' : 'details.seasonWatched')}
+            onClick={() => { setSeasonMenu(null); seasonMenu.mark(); }}
+          />
+        </Popover>
+      )}
       {panel === 'more' && (
         <MoreMenu
           item={item}

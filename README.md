@@ -62,8 +62,9 @@ Rows as you arranged them in Arc: Continue Watching or Up Next, Watch Together, 
 Recently Added and custom rows, collections, playlists and your Queue.
 
 **🎬 Title pages.** Play or Resume, Watched and Watchlist; cast, extras, More Like This and
-collections; seasons and episodes in the order you chose in Arc, with Show Missing Episodes,
-Shuffle Season and Mark Season as Watched. Theme Music plays on title pages. The ⋯ menu (or a
+collections; seasons and episodes in the order you chose in Arc, each season with a menu (OK on
+its tab) for Shuffle Season and Mark Season as Watched, and missing episodes when Show Missing
+Episodes is on in Settings. Theme Music plays on title pages. The ⋯ menu (or a
 long press of OK on any card) has Play Next, Add to Queue, Add to Playlist…, Watch Together,
 Rate… and Media Info.
 

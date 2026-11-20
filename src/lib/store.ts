@@ -137,8 +137,13 @@ export function prefs(): Promise<Prefs> {
   return prefsP;
 }
 
-/** Saves only these preferences (e.g. audio_language). Failures are left quiet: the choice still applies now. */
+/**
+ * Saves only these preferences (e.g. audio_language). They apply at once, so a screen that reads
+ * them straight after (a show's page on Back from Settings) sees the choice before the server has
+ * answered. Failures are left quiet: the choice still applies now.
+ */
 export function savePrefs(p: Partial<Prefs>) {
+  prefsP = prefs().then((old) => ({ ...old, ...p }));
   void api<Prefs>('/me/prefs', { method: 'PATCH', body: p }).then((all) => { prefsP = Promise.resolve(all); }, () => {});
 }
 
