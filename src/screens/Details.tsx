@@ -14,7 +14,7 @@ import { Button, Container, Focusable, useInitialFocus } from '../components/spo
 import { Overlay, Popover, PopoverItem } from '../components/Menu';
 import { MediaInfo, MoreMenu, toggleWatched, toggleWatchlist, useCanQueue } from '../components/TitleMenu';
 import { formatRuntime, formatTime, t } from '../i18n';
-import { episodeCode, formatLabels, languageName, resumeMs, versionLabel, versionsOf, watched } from '../lib/format';
+import { episodeCode, formatLabels, languageName, nextEpisode, resumeMs, versionLabel, versionsOf, watched } from '../lib/format';
 import { useActive, useNav } from '../lib/nav';
 import { queues, setSeasonPlayed, useChanges, withChanges } from '../lib/store';
 import { shuffled, usePlayAll } from '../lib/playAll';
@@ -35,13 +35,6 @@ interface Related { key: string; title?: string; items: Item[]; landscape: boole
 
 /** A tab under the show: one of its seasons, or the episodes its order doesn't include. */
 interface EpisodeTab { key: string; name: string; episodes: Item[]; unplaced: boolean; seasonNumber?: number }
-
-/** The episode to carry on with: one part-way through, else the first not watched, specials last. */
-function nextEpisode(seasons: Season[]): Item | undefined {
-  const ordered = seasons.filter((s) => s.season_number > 0).concat(seasons.filter((s) => s.season_number <= 0));
-  const eps = ordered.reduce<Item[]>((all, s) => all.concat(s.episodes), []).filter((e) => e.available !== false);
-  return eps.find((e) => resumeMs(e) > 0) ?? eps.find((e) => !e.user_data?.played) ?? eps[0];
-}
 
 function seasonName(s: Season) {
   return s.name || (s.season_number === 0 ? t('details.specials') : t('details.season', { n: s.season_number }));
