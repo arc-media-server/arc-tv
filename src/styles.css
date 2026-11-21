@@ -13,6 +13,11 @@
   --muted: #a1a1ad;
   --subtle: #6b6b78;
   --accent: #f5f5f7;
+  --pill: rgba(255, 255, 255, 0.10);
+  --pill-selected: rgba(255, 255, 255, 0.18);
+  --action-button: rgba(255, 255, 255, 0.16);
+  --button-focus: #fff;
+  --button-focus-text: #000;
   --accent-strong: rgba(255, 255, 255, 0.28);
   --accent-light: #f5f5f7;
   --warning: #ffb547;
@@ -308,16 +313,17 @@ p { margin: 0 0 16px; }
 .head-spacer { flex: 1 1 auto; }
 .head-count { font-size: 28px; margin-left: 24px; }
 .head-buttons { display: flex; flex-direction: row; align-items: center; }
-.tabs { display: flex; flex-direction: row; align-items: center; padding: 6px; border-radius: 40px; background: rgba(255, 255, 255, 0.08); }
-/* The Apple TV app's segmented control: a glass pill holding the tabs, the current one lighter. */
-.tab { padding: 12px 30px; border-radius: 34px; font-size: 26px; font-weight: 600; color: rgba(245, 245, 247, 0.65); white-space: nowrap; }
-.tab + .tab { margin-left: 4px; }
-.tab.selected { background: rgba(255, 255, 255, 0.18); color: var(--text); }
-.head-buttons .btn { background: rgba(255, 255, 255, 0.1); }
+/* Owner-confirmed Android values (server #499), doubled from dp for 1080p. */
+.tabs { display: flex; flex-direction: row; align-items: center; }
+.tab { display: flex; align-items: center; height: 72px; padding: 0 32px; border-radius: 36px; background: var(--pill); font-size: 28px; font-weight: 500; color: var(--text); white-space: nowrap; }
+.tab + .tab { margin-left: 20px; }
+.tab.selected { background: var(--pill-selected); }
+.head-buttons .btn { background: var(--pill); }
+.head-buttons .btn.small { font-size: 28px; font-weight: 500; }
 .collection-play { margin-left: 48px; }
 .collection-play .btn { margin-right: 20px; }
-.head-buttons .btn:focus { background: var(--text); }
-.tab.spottable:focus { background: var(--text); color: var(--bg); transform: none; box-shadow: none; }
+.head-buttons .btn:focus { background: var(--button-focus); color: var(--button-focus-text); }
+.head-buttons .btn.small:focus, .tab.spottable:focus { background: var(--button-focus); color: var(--button-focus-text); transform: scale(1.04); box-shadow: none; }
 .page-note { padding-left: 192px; padding-top: 32px; }
 .folder-trail { position: absolute; top: 8px; left: 0; right: 0; font-size: 26px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .library-body, .library-titles { position: absolute; top: 150px; left: 0; right: 0; bottom: 0; }
@@ -466,7 +472,12 @@ p { margin: 0 0 16px; }
 .hero-meta { margin-top: 14px; display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; font-size: 22px; color: rgba(245, 245, 247, 0.7); }
 .hero-meta > span:first-child { margin-right: 20px; }
 .hero-meta .label { font-size: 18px; padding: 0 10px; margin-right: 10px; }
-.details .round-btn { width: 84px; height: 84px; background: rgba(255, 255, 255, 0.14); }
+.details .round-btn { width: 88px; height: 88px; background: var(--action-button); color: #fff; }
+.details .round-btn .icon { width: 44px; height: 44px; }
+.details .round-btn.spottable:focus { background: var(--button-focus); color: var(--button-focus-text); transform: scale(1.10); }
+.details .actions .btn.primary { padding: 0 44px 0 36px; background: var(--action-button); color: #fff; font-size: 28px; font-weight: 500; }
+.details .actions .btn.primary .icon { width: 36px; height: 36px; }
+.details .actions .btn.primary:focus { background: var(--button-focus); color: var(--button-focus-text); transform: scale(1.06); }
 .details .actions > * { margin-right: 20px; }
 .info-section { padding: 24px 96px 40px; }
 .info-section .shelf-title { padding-left: 0; }
