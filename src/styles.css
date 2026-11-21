@@ -364,6 +364,7 @@ p { margin: 0 0 16px; }
 .season-bar { display: flex; flex-direction: row; align-items: center; margin-bottom: 4px; }
 .unplaced-note { font-size: 24px; margin: 16px 0 0; max-width: 1400px; }
 .episode-card { width: 400px; }
+.episode-code { font-size: 18px; font-weight: 600; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 2px; }
 .episode-overview {
   font-size: 22px; line-height: 1.35; color: rgba(245, 245, 247, 0.65); margin: 6px 0 6px; white-space: normal;
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; max-height: 90px;
@@ -426,11 +427,25 @@ p { margin: 0 0 16px; }
 .hero-dim { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(11, 11, 16, 0.82); opacity: 0; transition: opacity 0.3s; }
 .hero-dim.on { opacity: 1; }
 .details-hero { height: 930px; padding: 0 96px; display: flex; flex-direction: column; justify-content: flex-end; }
+.details-hero-film { height: 1008px; padding-bottom: 80px; box-sizing: border-box; }
+/* The header's text and buttons on the left, who's in it and who made it at the right, both low. */
+.hero-row { display: flex; flex-direction: row; align-items: flex-end; }
+.hero-main { flex: 1; min-width: 0; }
+.hero-credits { width: 760px; margin-left: 64px; margin-bottom: 56px; font-size: 24px; line-height: 1.4; }
+.hero-credit { margin-top: 12px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.hero-credit .muted-label { color: rgba(245, 245, 247, 0.7); }
+.hero-credit b { font-weight: 600; }
+/* The age rating in an outlined box, then the genres, above the description (as Android). */
+.hero-genres { margin-top: 24px; display: flex; flex-direction: row; align-items: center; font-size: 24px; font-weight: 600; }
+.age-rating { border: 2px solid rgba(245, 245, 247, 0.5); border-radius: 6px; padding: 0 10px; margin-right: 18px; font-size: 22px; color: rgba(245, 245, 247, 0.85); }
+.capsule { display: inline-flex; flex-direction: row; align-items: center; border: 2px solid rgba(245, 245, 247, 0.55); border-radius: 999px; padding: 0 16px; margin-right: 12px; font-size: 20px; font-weight: 700; color: rgba(245, 245, 247, 0.9); line-height: 30px; }
+.capsule.filled { background: var(--text); border-color: var(--text); color: var(--bg); }
+.capsule-part.split { border-left: 2px solid rgba(245, 245, 247, 0.45); margin-left: 12px; padding-left: 12px; }
 .details-hero .title-logo { max-width: 760px; height: 200px; }
 .details-hero .title-name { font-size: 80px; max-height: 200px; }
 .hero-episode { margin-top: 16px; font-size: 32px; font-weight: 600; }
 /* The description under the logo, then the buttons (as Android and the Apple TV app). */
-.hero-about { max-width: 1100px; margin-top: 24px; }
+.hero-about { max-width: 1100px; margin-top: 8px; }
 .hero-actions { margin-top: 28px; }
 .hero-actions .actions { margin-top: 0; }
 .hero-overview {
@@ -443,7 +458,7 @@ p { margin: 0 0 16px; }
 .hero-more { display: block; font-size: 20px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #fff; margin-top: 2px; }
 .about-text { display: block; font-size: 28px; line-height: 1.45; color: rgba(245, 245, 247, 0.85); max-height: 820px; overflow: hidden; }
 .hero-meta { margin-top: 14px; display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; font-size: 22px; color: rgba(245, 245, 247, 0.7); }
-.hero-meta > span:first-child { margin-right: 16px; }
+.hero-meta > span:first-child { margin-right: 20px; }
 .hero-meta .label { font-size: 18px; padding: 0 10px; margin-right: 10px; }
 .details .round-btn { width: 84px; height: 84px; background: rgba(255, 255, 255, 0.14); }
 .details .actions > * { margin-right: 20px; }
@@ -508,7 +523,35 @@ p { margin: 0 0 16px; }
 .tl-knob { position: absolute; top: 2px; width: 28px; height: 28px; margin-left: -14px; border-radius: 50%; background: #fff; opacity: 0; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5); }
 .timeline:focus .tl-knob { opacity: 1; }
 .tl-time { position: absolute; top: -52px; transform: translateX(-50%); font-size: 26px; font-weight: 600; }
-.ctl-times { display: flex; flex-direction: row; justify-content: space-between; margin-top: 10px; font-size: 24px; font-weight: 600; color: rgba(255, 255, 255, 0.8); }
+.ctl-times { position: relative; height: 34px; margin-top: 8px; font-size: 24px; font-weight: 600; color: rgba(255, 255, 255, 0.8); }
+.tl-now { position: absolute; top: 0; white-space: nowrap; display: flex; flex-direction: row; align-items: center; }
+.tl-now .icon { width: 22px; height: 22px; margin-right: 8px; }
+.tl-left { position: absolute; top: 0; right: 0; }
+/* The tabs under the timeline and the card a focused tab opens, as Android's player. */
+.osd-tabs { margin-top: 18px; white-space: nowrap; }
+.osd-tab { display: inline-block; padding: 8px 24px; margin-right: 12px; border-radius: 28px; font-size: 24px; font-weight: 600; color: rgba(255, 255, 255, 0.75); }
+.osd-tab.open { background: rgba(255, 255, 255, 0.16); color: #fff; }
+.osd-tab.spottable:focus { background: #fff; color: #000; transform: none; box-shadow: none; }
+.osd-card { height: 330px; overflow: hidden; }
+.osd-card .strip-items { padding-top: 16px; }
+.osd-tile { display: inline-block; vertical-align: top; width: 300px; margin-right: 24px; padding: 20px 24px; border-radius: 12px; background: rgba(255, 255, 255, 0.12); white-space: normal; }
+.osd-tile.current { background: rgba(255, 255, 255, 0.24); }
+.osd-tile-title { font-size: 24px; font-weight: 600; margin-bottom: 6px; }
+.osd-tile.spottable:focus { background: #fff; color: #000; }
+.osd-tile.spottable:focus .muted { color: rgba(0, 0, 0, 0.6); }
+.osd-card .person-card { width: 160px; margin-right: 32px; }
+.osd-episode { display: inline-block; vertical-align: top; width: 360px; margin-right: 28px; white-space: normal; }
+.osd-episode-art { position: relative; border-radius: 12px; overflow: hidden; }
+.osd-episode-art.current { box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.5); }
+.osd-code { position: absolute; left: 12px; bottom: 12px; padding: 2px 10px; border-radius: 6px; background: rgba(0, 0, 0, 0.7); font-size: 20px; font-weight: 600; color: #fff; }
+.osd-info { display: flex; flex-direction: row; align-items: flex-start; padding-top: 16px; }
+.osd-info-art { width: 420px; flex: 0 0 420px; border-radius: 12px; overflow: hidden; margin-right: 40px; }
+.osd-info-text { flex: 1 1 auto; min-width: 0; }
+.osd-info-title { font-size: 36px; font-weight: 700; margin-bottom: 6px; }
+.osd-info-overview { font-size: 22px; line-height: 1.4; margin: 10px 0 14px; color: rgba(255, 255, 255, 0.85); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.osd-info-side { flex: 0 0 auto; margin-left: 40px; text-align: center; }
+.osd-info-side .ctl { margin-left: 0; }
+.osd-info-label { font-size: 20px; margin-top: 8px; color: rgba(255, 255, 255, 0.8); }
 .popover-subtitle { padding-top: 18px; }
 
 /* Pre-roll: the existing player button, focused at the bottom right. */

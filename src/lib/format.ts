@@ -130,6 +130,44 @@ export function formatLabels(files: MediaFile[] = []): string[] {
   return out;
 }
 
+/** A quality capsule: the resolution filled white, the rest outlined, its parts split by a line ("AAC | 2.0"). */
+export interface Capsule { parts: string[]; filled?: boolean }
+
+const capsuleAudio: Record<string, string> = { eac3: 'DD+', ac3: 'DD', truehd: 'TrueHD', aac: 'AAC', flac: 'FLAC', opus: 'Opus', mp3: 'MP3' };
+
+/**
+ * A title's quality as Android's (and the Apple TV app's) capsules: "1080p", then "SDR" or its HDR
+ * ("DV | HDR10"), then the audio ("AAC | 2.0", "DD+ | 5.1") and "Atmos". Several versions say how many.
+ */
+export function formatCapsules(files: MediaFile[] = []): Capsule[] {
+  const present = files.filter((f) => !f.missing && (f.part ?? 0) <= 1);
+  if (present.length > 1) return [{ parts: [t('details.versions', { n: present.length })] }];
+  const f = present[0];
+  if (!f?.streams) return [];
+  const v = f.streams.find((x) => x.kind === 'video');
+  const a = f.streams.find((x) => x.kind === 'audio');
+  const out: Capsule[] = [];
+  if (v) {
+    const res = resolutionName(v.width, v.height);
+    if (res) out.push({ parts: [res === '576p' || res === '480p' ? 'SD' : res], filled: true });
+    const hdr: string[] = [];
+    if (v.dolby_vision) hdr.push('DV');
+    if (v.hdr10_plus) hdr.push('HDR10+');
+    else if (v.color_transfer === 'smpte2084') hdr.push('HDR10');
+    else if (v.color_transfer === 'arib-std-b67') hdr.push('HLG');
+    out.push({ parts: hdr.length ? hdr : ['SDR'] });
+  }
+  if (a) {
+    const p = (a.profile ?? '').toLowerCase();
+    const codec = !a.codec ? '' : a.codec === 'dts' ? (p.includes('dts:x') ? 'DTS:X' : (a.profile ?? '').includes('MA') ? 'DTS-HD MA' : 'DTS') : capsuleAudio[a.codec] ?? a.codec.toUpperCase();
+    const ch = !a.channels ? '' : a.channels === 1 ? '1.0' : a.channels === 2 ? '2.0' : a.channels === 6 ? '5.1' : a.channels === 8 ? '7.1' : `${a.channels}ch`;
+    const parts = [codec, ch].filter(Boolean);
+    if (parts.length) out.push({ parts });
+    if (p.includes('atmos')) out.push({ parts: ['Atmos'] });
+  }
+  return out;
+}
+
 /** A title's versions to choose from: its files on disk (a multi-part file counts once). */
 export function versionsOf(it: Item): MediaFile[] {
   return (it.files ?? []).filter((f) => !f.missing && (f.part ?? 0) <= 1);
