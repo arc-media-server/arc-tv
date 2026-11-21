@@ -39,6 +39,9 @@ remote's keys (not a TV):
 - [missing-episodes.jpg](2026-11-20-season-menu/missing-episodes.jpg): Season 2's episodes, Not on
   disk, after a reload with the setting on.
 
+- README's [show.jpg](../screenshots/show.jpg) retaken: Breaking Bad's page, framed as before,
+  without the buttons beside Season 1.
+
 ## Checks
 
 - `npm run check`: passed (types, Watch Together 25, Subtitle Timing 7, both TV builds, old-TV
@@ -52,7 +55,6 @@ remote's keys (not a TV):
 
 ## Limits
 
-- The README's Breaking Bad picture still shows the old buttons; it needs retaking.
 - Nothing tried on a real LG or Samsung TV.
 
 ## Logging

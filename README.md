@@ -40,7 +40,7 @@ video, so files your TV can handle play as they are.
 <table>
   <tr>
     <td width="50%"><img src="docs/screenshots/film.jpg" alt="Dune: Part Two's page, with Resume from where you stopped"></td>
-    <td width="50%"><img src="docs/screenshots/show.jpg" alt="Breaking Bad's page, with Resume S1 · E3 and the season's actions"></td>
+    <td width="50%"><img src="docs/screenshots/show.jpg" alt="Breaking Bad's page, with Resume S1 · E3 and the Season 1 tab"></td>
   </tr>
   <tr>
     <td width="50%"><img src="docs/screenshots/library.jpg" alt="Browsing Movies, with Sort, Filters and the A–Z bar"></td>
