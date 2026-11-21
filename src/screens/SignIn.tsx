@@ -14,14 +14,15 @@ export function SignIn({ serverName, serverURL, onToken, onOtherServer }: {
   onOtherServer: () => void;
 }) {
   const [code, setCode] = useState('');
-  const [expired, setExpired] = useState(false);
+  /** The last code ran out and this is a new one, as Android's. */
+  const [renewed, setRenewed] = useState(false);
   const [error, setError] = useState('');
   const [round, setRound] = useState(0);
 
   useEffect(() => {
     let live = true;
     let timer = 0;
-    setExpired(false);
+    setCode('');
     setError('');
     (async () => {
       try {
@@ -37,7 +38,7 @@ export function SignIn({ serverName, serverURL, onToken, onOtherServer }: {
             else timer = window.setTimeout(poll, 3000);
           } catch (e) {
             if (!live) return;
-            if (e instanceof ApiError && e.status === 404) setExpired(true);
+            if (e instanceof ApiError && e.status === 404) { setRenewed(true); setRound((r) => r + 1); }
             else timer = window.setTimeout(poll, 5000);
           }
         };
@@ -53,19 +54,29 @@ export function SignIn({ serverName, serverURL, onToken, onOtherServer }: {
   }, [round, onToken]);
 
   const linkURL = `${(serverURL || location.origin).replace(/^https?:\/\//, '')}/link`;
+  // As Android's: the steps and buttons on the left, the code in boxes on the right.
   return (
-    <div className="screen centered">
-      <ArcLogo kind="stacked" className="screen-logo" />
-      <h1>{t('link.title', { server: serverName })}</h1>
-      <p className="lead">{t('link.steps')}</p>
-      {!expired && code && <div className="link-code">{code}</div>}
-      {!expired && <p className="muted">{t('link.or', { url: linkURL })}</p>}
-      {expired && <p className="error">{t('link.expired')}</p>}
-      {error && <p className="error">{error}</p>}
-      <Container className="inline">
-        {(expired || error) && <Button data-default onClick={() => setRound((r) => r + 1)}>{t('link.newCode')}</Button>}
-        <Button onClick={onOtherServer}>{t('link.otherServer')}</Button>
-      </Container>
+    <div className="screen signin">
+      <div className="signin-left">
+        <ArcLogo className="signin-logo" />
+        <h1 className="signin-title">{t('link.title')}</h1>
+        {[t('link.stepOpen'), t('link.stepLink', { url: linkURL }), t('link.stepCode')].map((text, i) => (
+          <div key={i} className="signin-step"><span className="signin-num">{i + 1}</span><span>{text}</span></div>
+        ))}
+        <Container className="inline signin-buttons">
+          <Button className="outline" data-default onClick={() => { setRenewed(false); setRound((r) => r + 1); }}>{t('link.newCode')}</Button>
+          <Button className="outline" onClick={onOtherServer}>{t('link.otherServer')}</Button>
+        </Container>
+      </div>
+      <div className="signin-right">
+        {error ? <p className="error">{error}</p> : !code ? <div className="spinner" /> : (
+          <>
+            <div className="signin-code">{code.split('').map((c, i) => <span key={i}>{c}</span>)}</div>
+            <div className="signin-wait"><div className="spinner small" /><span>{t(renewed ? 'link.renewed' : 'link.waiting')}</span></div>
+          </>
+        )}
+        <div className="signin-server">{t('link.server', { server: serverName || linkURL.replace(/\/link$/, '') })}</div>
+      </div>
     </div>
   );
 }
