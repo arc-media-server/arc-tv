@@ -1,0 +1,98 @@
+# Checks and packages the TV app. To save Actions minutes it runs only when asked:
+#   - Actions > Build > Run workflow. On main this also publishes a pre-release
+#     (tv-build-<run number>) on the Releases page; on another branch, a run artifact only.
+#   - A pushed v* tag: a normal release with that version.
+#   - A push whose commit message contains [build]: a run artifact only, never a release.
+# Pull requests and ordinary pushes run nothing. A release is made only after the checks pass.
+#
+# LG: the .ipk installs on a TV in Developer Mode (README). Samsung: a .wgt must be signed with a
+# Samsung author certificate, which this workflow doesn't have yet, so the release carries the
+# unsigned app folder as a zip to sign in Tizen Studio (README, "Releases").
+name: Build
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+    branches: ['**']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v') || contains(github.event.head_commit.message, '[build]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Version
+        id: version
+        # A v* tag gives its own version (v0.2.0 -> 0.2.0). Any other build is package.json's
+        # major.minor plus the run number (0.1.57), so each build installs over the last one.
+        # Raise package.json's version when a release starts a new major or minor.
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then v="${GITHUB_REF_NAME#v}"
+          else v="$(node -p "require('./package.json').version.split('.').slice(0,2).join('.')").${{ github.run_number }}"; fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          sed -i -E "s/(\"version\": *\")[^\"]*\"/\1$v\"/" platforms/webos/appinfo.json
+          sed -i -E "s/(<widget [^>]* version=\")[^\"]*\"/\1$v\"/" platforms/tizen/config.xml
+          grep -n '"version"' platforms/webos/appinfo.json
+          grep -n 'version=' platforms/tizen/config.xml | head -2
+      - name: Check (types, tests, both TV builds, old-TV syntax)
+        run: npm run check
+      - name: LG package
+        run: |
+          npm i -g @webos-tools/cli
+          npm run package:webos
+          mkdir -p release
+          cp "out/webos/org.arcmediaserver.tv_${{ steps.version.outputs.version }}_all.ipk" "release/arc-lg-${{ steps.version.outputs.version }}.ipk"
+      - name: Samsung app folder (unsigned)
+        run: |
+          node -e "import('./scripts/stage.mjs').then(m => m.stage('tizen'))"
+          (cd out/tizen/app && zip -qr "$GITHUB_WORKSPACE/release/arc-samsung-unsigned-${{ steps.version.outputs.version }}.zip" .)
+      - name: Checksums
+        run: cd release && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: arc-tv-${{ steps.version.outputs.version }}
+          path: release/
+          retention-days: 30
+
+  release:
+    needs: build
+    if: (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: arc-tv-${{ needs.build.outputs.version }}
+          path: release
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          notes="Samsung: the zip is the unsigned app; sign it in Tizen Studio with your Samsung certificate to install it (README, Releases)."
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            gh release create "$GITHUB_REF_NAME" release/* --repo "$GITHUB_REPOSITORY" \
+              --title "Arc for LG and Samsung $VERSION" --generate-notes --notes "$notes" --verify-tag
+          else
+            gh release create "tv-build-${{ github.run_number }}" release/* --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" --prerelease \
+              --title "Arc for LG and Samsung $VERSION (build ${{ github.run_number }})" --generate-notes --notes "$notes"
+          fi
