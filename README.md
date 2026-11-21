@@ -40,7 +40,7 @@ video, so files your TV can handle play as they are.
 <table>
   <tr>
     <td width="50%"><img src="docs/screenshots/film.jpg" alt="Dune: Part Two's page, with Resume from where you stopped"></td>
-    <td width="50%"><img src="docs/screenshots/show.jpg" alt="Breaking Bad's page, with Resume S1 · E3 and the season's actions"></td>
+    <td width="50%"><img src="docs/screenshots/show.jpg" alt="Breaking Bad's page, with Resume S1 · E3 and the Season 1 tab"></td>
   </tr>
   <tr>
     <td width="50%"><img src="docs/screenshots/library.jpg" alt="Browsing Movies, with Sort, Filters and the A–Z bar"></td>
@@ -62,8 +62,9 @@ Rows as you arranged them in Arc: Continue Watching or Up Next, Watch Together, 
 Recently Added and custom rows, collections, playlists and your Queue.
 
 **🎬 Title pages.** Play or Resume, Watched and Watchlist; cast, extras, More Like This and
-collections; seasons and episodes in the order you chose in Arc, with Show Missing Episodes,
-Shuffle Season and Mark Season as Watched. Theme Music plays on title pages. The ⋯ menu (or a
+collections; seasons and episodes in the order you chose in Arc, each season with a menu (OK on
+its tab) for Shuffle Season and Mark Season as Watched, and missing episodes when Show Missing
+Episodes is on in Settings. Theme Music plays on title pages. The ⋯ menu (or a
 long press of OK on any card) has Play Next, Add to Queue, Add to Playlist…, Watch Together,
 Rate… and Media Info.
 

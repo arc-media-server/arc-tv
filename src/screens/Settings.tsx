@@ -91,6 +91,7 @@ export function SettingsContent({ serverName, onSwitchServer, onSignOut, onReady
             <Row label={t('settings.hideSpoilers')} value={onOff(!!p.hide_spoilers)} onClick={() => { void setHideSpoilers(!p.hide_spoilers).then(setP, () => { console.warn('Arc: could not save spoiler preference'); toast(t('settings.saveFailed')); }); }} />
             {/* Theme music */}
             <Row label={t('settings.themeMusic')} value={onOff(p.theme_music !== false)} onClick={() => change({ theme_music: p.theme_music === false })} />
+            <Row label={t('settings.showMissing')} value={onOff(!!p.show_missing_episodes)} onClick={() => change({ show_missing_episodes: !p.show_missing_episodes })} />
             {choiceRow(t('settings.audioLanguage'), audioChoices, p.audio_language ?? '', (v) => change({ audio_language: v }))}
           </section>
           <section data-section>
