@@ -194,8 +194,8 @@ TV bundle uses newer syntax.
 npm install
 npm run dev                 # desktop Chrome at http://localhost:5173, proxying /api to Arc on :8099
 ARC_URL=http://192.168.1.10:8099 npm run dev   # or another Arc
-npm run check               # types, the Watch Together and Subtitle Timing tests, both TV builds
-                            # and the old-TV syntax check
+npm run check               # types, the Watch Together, Subtitle Timing and episode number tests,
+                            # both TV builds and the old-TV syntax check
 ```
 
 In the browser, arrow keys and Enter move like the remote, holding Enter (or a right-click) is a

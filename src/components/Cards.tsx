@@ -82,14 +82,12 @@ export function cardTitle(card: Card): string {
   return card.item.kind === 'episode' ? card.item.series_title ?? card.item.title : card.item.title;
 }
 
-function cardSubtitle(card: Card, thumb: boolean): string {
+function cardSubtitle(card: Card): string {
   const it = card.item;
   if (card.sub !== undefined) return card.sub;
   if (card.seasonNumber !== undefined) return `${t('details.season', { n: card.seasonNumber })} · ${t('details.newEpisodes', { n: card.newEpisodes ?? 0 })}`;
-  if (it.kind === 'episode') {
-    const code = episodeCode(it);
-    return thumb && it.title !== cardTitle(card) ? [code, it.title].filter(Boolean).join(' · ') : code;
-  }
+  // Under the show's name, just the number: the episode's title never shares the line.
+  if (it.kind === 'episode') return episodeCode(it);
   return it.year ? String(it.year) : '';
 }
 
@@ -134,7 +132,7 @@ export function MediaCard({ card, look = 'poster', seasonPoster, caption = true,
     : { ...card, ...cardFor(item), item, mosaic: undefined };
   const thumb = look === 'thumb';
   const art = thumb ? shown.thumb : seasonPoster ? shown.seasonPoster ?? shown.poster : shown.poster;
-  const sub = caption ? cardSubtitle(shown, thumb) : '';
+  const sub = caption ? cardSubtitle(shown) : '';
   const canMenu = menu && menuKinds.indexOf(item.kind) >= 0 && item.id !== '';
   return (
     <div className={`card card-${look}`} style={width ? { width } : undefined}>

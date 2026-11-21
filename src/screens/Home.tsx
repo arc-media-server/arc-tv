@@ -7,7 +7,7 @@ import { ContinueRowContext, MediaCard, Strip } from '../components/Cards';
 import { Scroller } from '../components/Scroller';
 import { Button, Container } from '../components/spot';
 import { formatRuntime, t } from '../i18n';
-import { episodeCode, formatLabels } from '../lib/format';
+import { episodeHeading, formatLabels } from '../lib/format';
 import { cardFor, loadRow, resolveHomeRows, rowTitle, type Card, type RowSpec } from '../lib/home';
 import { useNav } from '../lib/nav';
 import { RoomCards, useRooms } from '../components/RoomsRow';
@@ -32,7 +32,7 @@ const queueRow: RowSpec = { id: 'queue', source: { kind: 'queue' }, style: 'thum
 /** The line under the title in the summary: an episode's number and name, the year, rating, length, genres. */
 export function summaryMeta(it: Item): string[] {
   return [
-    it.kind === 'episode' ? [episodeCode(it), it.title].filter(Boolean).join(' · ') : '',
+    it.kind === 'episode' ? episodeHeading(it) : '',
     it.kind !== 'episode' && it.year ? String(it.year) : '',
     it.content_rating ?? '',
     it.runtime_min ? formatRuntime(it.runtime_min) : '',
