@@ -61,17 +61,20 @@ export function Profiles({ onChosen, onSignOut }: { onChosen: (p: Profile) => vo
   return (
     <div className="screen centered">
       <ArcLogo className="profiles-logo" />
-      <h1>{t('profiles.title')}</h1>
+      <h1 className="profiles-title">{t('profiles.title')}</h1>
+      {/* As Android's: the focused profile's circle gets a white ring and its name turns white. */}
       <Container className="profiles">
         {profiles.map((p, i) => (
-          <Focusable key={p.id} className="profile" data-default={i === 0 || undefined} onClick={() => void choose(p)}>
-            <div className={`avatar color-${p.color}`}>{p.name.slice(0, 1).toUpperCase()}</div>
-            <div>{p.name}</div>
-          </Focusable>
+          <div key={p.id} className="profile">
+            <Focusable className="profile-ring" data-default={i === 0 || undefined} onClick={() => void choose(p)}>
+              <div className={`avatar color-${p.color}`}>{p.name.slice(0, 1).toUpperCase()}</div>
+            </Focusable>
+            <div className="profile-name">{p.name}</div>
+          </div>
         ))}
       </Container>
       {error && <p className="error">{error}</p>}
-      <Button onClick={onSignOut}>{t('profiles.signOut')}</Button>
+      <Button className="outline" onClick={onSignOut}>{t('profiles.signOut')}</Button>
     </div>
   );
 }

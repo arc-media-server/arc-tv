@@ -335,7 +335,8 @@ export function LibraryContent({ library, genre, visits, onReady }: { library: L
 
   const tabs: { id: Tab; label: string }[] = [];
   if (library.kind !== 'videos') tabs.push({ id: 'recommended', label: t('library.recommended') });
-  tabs.push({ id: 'titles', label: t(library.kind === 'shows' ? 'library.shows' : library.kind === 'videos' ? 'library.videos' : 'library.movies') });
+  // As Android's: the heading is the library's name, so the titles' tab is just Library.
+  tabs.push({ id: 'titles', label: t('library.library') });
   // Home videos can be browsed folder by folder too, as on the web.
   if (library.kind === 'videos') tabs.push({ id: 'folders', label: t('library.folders') });
   if (collections.value?.length) tabs.push({ id: 'collections', label: t('library.collections') });
@@ -415,11 +416,32 @@ export function LibraryContent({ library, genre, visits, onReady }: { library: L
   );
 }
 
-/** The Watchlist from the sidebar: its name and count, then the titles in the library's grid. */
+type WatchShow = 'all' | 'movies' | 'shows';
+type WatchSort = 'added' | 'title' | 'released';
+const watchShows: WatchShow[] = ['all', 'movies', 'shows'];
+const watchSorts: WatchSort[] = ['added', 'title', 'released'];
+/** A title without a leading "The", "A" or "An", as libraries sort them. */
+const sortTitle = (x: string) => x.toLowerCase().replace(/^(the|a|an) /, '');
+/** The Watchlist's pills, as Android's (and the Apple TV app's): what's shown and in which order. Date Added is Arc's own order. */
+function watchlistShown(items: Item[], show: WatchShow, sort: WatchSort): Item[] {
+  const kept = items.filter((it) => show === 'all' || (show === 'movies' ? it.kind === 'movie' : it.kind === 'series'));
+  if (sort === 'title') return kept.slice().sort((a, b) => (sortTitle(a.title) < sortTitle(b.title) ? -1 : sortTitle(a.title) > sortTitle(b.title) ? 1 : 0));
+  if (sort === 'released') {
+    const key = (it: Item) => it.release_date ?? (it.year ? String(it.year) : '');
+    return kept.slice().sort((a, b) => (key(a) > key(b) ? -1 : key(a) < key(b) ? 1 : sortTitle(a.title) < sortTitle(b.title) ? -1 : 1));
+  }
+  return kept;
+}
+
+/** The Watchlist from the sidebar: its name with the All and Date Added pills at the right, then the titles in the library's grid. */
 export function WatchlistContent({ visits, onReady }: { visits: number; onReady: () => void }) {
   const nav = useNav();
   const [items, setItems] = useState<Item[] | null>(null);
   const [error, setError] = useState('');
+  const [show, setShow] = useState<WatchShow>('all');
+  const [sort, setSort] = useState<WatchSort>('added');
+  const [open, setOpen] = useState<'show' | 'sort' | null>(null);
+  const shown = items ? watchlistShown(items, show, sort) : [];
   const load = useCallback(() => {
     setError('');
     api<Item[]>('/watchlist').then((list) => setItems(list ?? []), (e) => setError((e as Error).message));
@@ -433,16 +455,31 @@ export function WatchlistContent({ visits, onReady }: { visits: number; onReady:
     <div className="library">
       <div className="page-head" style={{ paddingLeft: START }}>
         <h1 className="page-title">{t('nav.watchlist')}</h1>
-        {items && <span className="muted head-count">{countLabel(items.length)}</span>}
+        {items && items.length > 0 && (
+          <>
+            <div className="head-spacer" />
+            <Container className="head-buttons">
+              <Button className="small" onClick={() => setOpen('show')}>{t(`watchlist.show.${show}`)}</Button>
+              <Button className="small" onClick={() => setOpen('sort')}>{t(`watchlist.sort.${sort}`)}</Button>
+            </Container>
+          </>
+        )}
       </div>
+      {open && (
+        <Popover place="below" onClose={() => setOpen(null)}>
+          {(open === 'show' ? watchShows : watchSorts).map((v) => {
+            const on = open === 'show' ? v === show : v === sort;
+            return <PopoverItem key={v} first={on} icon={on ? 'check' : ''} label={open === 'show' ? t(`watchlist.show.${v as WatchShow}`) : t(`watchlist.sort.${v as WatchSort}`)} onClick={() => { if (open === 'show') setShow(v as WatchShow); else setSort(v as WatchSort); setOpen(null); }} />;
+          })}
+        </Popover>
+      )}
       {error && <div className="page-note"><p className="error">{error}</p><Button onClick={load}>{t('common.retry')}</Button></div>}
       {items && !items.length && <p className="muted page-note">{t('watchlist.empty')}</p>}
       {items && items.length > 0 && (
         <div className="library-titles">
-          <TitleGrid count={items.length} itemAt={(i) => items[i]} landscape={false} onOpen={(it) => nav.open(it)} />
+          <TitleGrid key={`${show}:${sort}`} count={shown.length} itemAt={(i) => shown[i]} landscape={false} onOpen={(it) => nav.open(it)} />
         </div>
       )}
     </div>
   );
 }
-

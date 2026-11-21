@@ -4,7 +4,7 @@ import { useLiveRefresh } from '../lib/live-updates';
 import { liveTopics } from '../lib/live-hints';
 import { useActive } from '../lib/nav';
 import { useEffect, useState } from 'react';
-import type { Prefs } from '../api';
+import type { Prefs, Profile } from '../api';
 import { Popover, PopoverItem } from '../components/Menu';
 import { Scroller } from '../components/Scroller';
 import { Container, Focusable } from '../components/spot';
@@ -34,7 +34,8 @@ function Row({ label, value, onClick, first }: { label: string; value: string; o
   );
 }
 
-export function SettingsContent({ serverName, onSwitchServer, onSignOut, onReady }: {
+export function SettingsContent({ profile, serverName, onSwitchServer, onSignOut, onReady }: {
+  profile: Profile | null;
   serverName: string;
   onSwitchServer: () => void;
   onSignOut: () => void;
@@ -80,17 +81,23 @@ export function SettingsContent({ serverName, onSwitchServer, onSignOut, onReady
   );
 
   return (
+    // As Android's: "Settings" centred at the top, who's watching on the left, the list on the right.
     <div className="settings">
+      <h1 className="page-title settings-title" style={{ paddingLeft: START }}>{t('settings.title')}</h1>
+      <div className="settings-side" style={{ left: START }}>
+        {profile && <div className={`avatar settings-avatar color-${profile.color}`}>{profile.name.slice(0, 1).toUpperCase()}</div>}
+        {profile && <div className="settings-name">{profile.name}</div>}
+        {serverName && <div className="settings-server">{serverName}</div>}
+      </div>
       <Scroller className="settings-page" pad={80}>
-        <h1 className="page-title settings-title" style={{ paddingLeft: START }}>{t('settings.title')}</h1>
-        <Container className="settings-list" style={{ marginLeft: START }}>
+        <Container className="settings-list">
           <section data-section>
             <h2 className="settings-heading">{t('settings.playback')}</h2>
             <Row first label={t('settings.autoPlay')} value={onOff(p.auto_play !== false)} onClick={() => change({ auto_play: p.auto_play === false })} />
             <Row label={t('settings.autoSkip')} value={onOff(!!p.auto_skip)} onClick={() => change({ auto_skip: !p.auto_skip })} />
-            <Row label={t('settings.hideSpoilers')} value={onOff(!!p.hide_spoilers)} onClick={() => { void setHideSpoilers(!p.hide_spoilers).then(setP, () => { console.warn('Arc: could not save spoiler preference'); toast(t('settings.saveFailed')); }); }} />
             {/* Theme music */}
             <Row label={t('settings.themeMusic')} value={onOff(p.theme_music !== false)} onClick={() => change({ theme_music: p.theme_music === false })} />
+            <Row label={t('settings.hideSpoilers')} value={onOff(!!p.hide_spoilers)} onClick={() => { void setHideSpoilers(!p.hide_spoilers).then(setP, () => { console.warn('Arc: could not save spoiler preference'); toast(t('settings.saveFailed')); }); }} />
             <Row label={t('settings.showMissing')} value={onOff(!!p.show_missing_episodes)} onClick={() => change({ show_missing_episodes: !p.show_missing_episodes })} />
             {choiceRow(t('settings.audioLanguage'), audioChoices, p.audio_language ?? '', (v) => change({ audio_language: v }))}
           </section>

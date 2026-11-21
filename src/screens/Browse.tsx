@@ -153,7 +153,7 @@ export function Browse({ profile, canSwitchProfile, serverName, onSwitchProfile,
         {section.kind === 'watchlist' && <WatchlistContent visits={visits} onReady={ready} />}
         {section.kind === 'playlists' && <PlaylistsContent visits={visits} onReady={ready} />}
         {section.kind === 'together' && <TogetherContent onReady={ready} />}
-        {section.kind === 'settings' && <SettingsContent serverName={serverName} onSwitchServer={onSwitchServer} onSignOut={onSignOut} onReady={ready} />}
+        {section.kind === 'settings' && <SettingsContent profile={profile} serverName={serverName} onSwitchServer={onSwitchServer} onSignOut={onSignOut} onReady={ready} />}
         {lib && <LibraryContent key={`${lib.id}:${section.kind === 'library' ? section.genre ?? '' : ''}`} library={lib} genre={section.kind === 'library' ? section.genre : undefined} visits={visits} onReady={ready} />}
       </Container>
       <EntryContainer
