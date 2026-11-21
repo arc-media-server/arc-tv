@@ -6,9 +6,9 @@ import { correction, following, hosting, keepNudging, startedOnce } from '../lib
 import { Spotlight } from '@enact/spotlight';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import platform from '@platform';
-import { preroll, type PrerollClip, api, apiOrNull, apiText, ApiError, enc, type Extra, type Item, type Playback, type Prefs, type SubtitleTrack, type Trickplay } from '../api';
+import { preroll, type PrerollClip, api, apiOrNull, apiText, ApiError, enc, type Extra, type Item, type Playback, type Prefs, type SeasonsResponse, type SubtitleTrack, type Trickplay } from '../api';
 import { Artwork, useArtwork } from '../components/Artwork';
-import { cardFor } from '../components/Cards';
+import { cardFor, PersonCard, Strip } from '../components/Cards';
 import { Icon } from '../components/Icon';
 import { Popover, PopoverItem } from '../components/Menu';
 import { Scroller } from '../components/Scroller';
@@ -16,7 +16,7 @@ import { Button, Container, focusElement, Focusable, Trap } from '../components/
 import { formatTime, t } from '../i18n';
 import { toast } from '../lib/toast';
 import { useBack } from '../lib/back';
-import { audioCodecName, audioTrackName, channelsName, episodeHeading, kbpsName, languageName, sameLanguage, videoCodecName } from '../lib/format';
+import { audioCodecName, audioTrackName, channelsName, episodeCode, episodeHeading, formatCapsules, kbpsName, languageName, sameLanguage, videoCodecName } from '../lib/format';
 import { useNav } from '../lib/nav';
 import { clearChange, nextInQueue, prefs as loadPrefs, queue, queues, savePrefs } from '../lib/store';
 import { activeCues, chooseSubtitle as pickSubtitle, parseVTT, playableSubtitles, rememberedSubtitleLanguage, subtitleLook, type Cue } from '../lib/subtitles';
@@ -27,10 +27,12 @@ import type { NativePlayer, PlayerCaps } from '../platform/types';
 // play, repackaging or conversion from the TV's caps (falling back direct -> remux -> convert if
 // the TV can't play what it said it could); the stream URL goes through POST /cast because the
 // TV's player can't send the sign-in header. Progress is saved every 10 seconds and on pause and
-// close, a converting session is kept alive and ended on close. The controls match the web
-// player's: title and Close at the top; the timeline (with thumbnails while scrubbing); play,
-// next, back and forward 10 seconds; then audio, subtitles, version, quality, chapters, speed and
-// playback info. Skip Intro / Credits and the Up Next countdown follow Arc's markers. Text
+// close, a converting session is kept alive and ended on close. The controls match Android's: the
+// title (an episode's show, with "S1 · E4 · Pilot" above it); three round buttons, Playback (speed,
+// quality, version, info, Watch Together), Audio and Subtitles; the timeline (with thumbnails while
+// scrubbing; OK plays or pauses) with the time played under the playhead and the time left; then
+// the Info, Chapters, Cast and Episodes tabs, each opening its card. The remote's own keys play,
+// pause and seek. Skip Intro / Credits and the Up Next countdown follow Arc's markers. Text
 // subtitles are drawn by the app; a picture track (PGS, VobSub) is burned into the video by Arc,
 // which restarts the stream converted, as the web player does.
 //
@@ -41,7 +43,9 @@ import type { NativePlayer, PlayerCaps } from '../platform/types';
 // Leave. Audio, subtitles, version and quality stay this TV's own.
 
 type Attempt = 'direct' | 'remux' | 'convert';
-type Menu = 'audio' | 'subtitles' | 'timing' | 'version' | 'quality' | 'chapters' | 'speed' | 'info' | null;
+type Menu = 'playback' | 'audio' | 'subtitles' | 'timing' | 'version' | 'quality' | 'chapters' | 'speed' | 'info' | null;
+/** The tabs under the timeline, as Android's player: each opens its card in place of the title and timeline. */
+type Tab = 'info' | 'chapters' | 'cast' | 'episodes';
 
 function capsFor(caps: PlayerCaps, attempt: Attempt): PlayerCaps {
   if (attempt === 'remux') return { ...caps, containers: [] };
@@ -202,6 +206,8 @@ function FilmPlayer({ item: start, startMs, entryId, carryOn, fileId, together: 
   const [trick, setTrick] = useState<Trickplay | null>(null);
   const [controls, setControls] = useState(true);
   const [menu, setMenu] = useState<Menu>(null);
+  const [tab, setTab] = useState<Tab | null>(null);
+  const [show, setShow] = useState<SeasonsResponse | null>(null);
   const [scrub, setScrub] = useState<number | null>(null);
   const [label, setLabel] = useState<string | null>(null);
   const [upNextIn, setUpNextIn] = useState<number | null>(null);
@@ -580,12 +586,34 @@ function FilmPlayer({ item: start, startMs, entryId, carryOn, fileId, together: 
     if (atEnd) nav.back();
   };
 
-  // The controls hide 5 seconds after the last key while playing with no menu open.
+  // The controls hide 5 seconds after the last key while playing with no menu or tab open.
   useEffect(() => {
-    if (!playing || menu || !controls || scrub !== null) return;
+    if (!playing || menu || tab || !controls || scrub !== null) return;
     const timer = window.setTimeout(() => setControls(false), 5000);
     return () => window.clearTimeout(timer);
-  }, [playing, menu, controls, inputTick, scrub]);
+  }, [playing, menu, tab, controls, inputTick, scrub]);
+  useEffect(() => { if (!controls) setTab(null); }, [controls]);
+
+  // An episode: its show (for the title, which GET /items/{id} leaves out) and its season's
+  // episodes for the Episodes tab.
+  const showId = item.kind === 'episode' ? item.parent_id : undefined;
+  useEffect(() => {
+    if (!showId) return;
+    let live = true;
+    api<SeasonsResponse>(`/series/${enc(showId)}/seasons`).then((r) => {
+      if (!live) return;
+      setShow(r);
+      // Started from somewhere that left out its place in the show (a search result): take it from here.
+      const ep = (r.seasons ?? []).reduce<Item[]>((all, x) => all.concat(x.episodes ?? []), []).filter((x) => x.id === itemId)[0];
+      if (ep) setItem((was) => ({ ...was, series_title: was.series_title ?? r.series?.title, season_number: was.season_number ?? ep.season_number, episode_number: was.episode_number ?? ep.episode_number }));
+    }, () => {});
+    return () => { live = false; };
+  }, [showId]);
+  /** Closes the open tab's card and puts the focus back on the timeline. */
+  const closeTab = () => {
+    setTab(null);
+    window.setTimeout(() => Spotlight.focus('player-play'), 0);
+  };
 
   // Scrubbing on the timeline moves a marker; the seek happens when it rests.
   useEffect(() => {
@@ -603,6 +631,7 @@ function FilmPlayer({ item: start, startMs, entryId, carryOn, fileId, together: 
     if (inLobby || roomPanel !== null || endedPane) return false;
     if (upNextIn !== null) cancelUpNext();
     else if (menu) setMenu(null);
+    else if (tab) closeTab();
     else if (controls && !stopped && !failed) setControls(false);
     else if (sessionRef.current) setRoomPanel('panel');
     else return false;
@@ -750,9 +779,13 @@ function FilmPlayer({ item: start, startMs, entryId, carryOn, fileId, together: 
 
   const duration = plan?.duration_ms ?? 0;
   const shown = scrub ?? pos;
-  // An episode: the show above, then "S1 · E4 · Pilot".
-  const title = item.kind === 'episode' ? episodeHeading(item) : item.title;
-  const subtitleLine = item.kind === 'episode' ? item.series_title ?? '' : item.year ? String(item.year) : '';
+  // As Android's: an episode's show is the title with "S1 · E4 · Pilot" small above it; a film
+  // shows its name alone.
+  const episode = item.kind === 'episode';
+  const title = episode ? item.series_title || episodeHeading(item) : item.title;
+  const subtitleLine = episode && item.series_title ? episodeHeading(item) : '';
+  const seasonEpisodes = episode ? show?.seasons?.find((x) => x.season_number === item.season_number)?.episodes ?? [] : [];
+  const castList = (item.credits ?? []).filter((c) => c.role === 'actor');
   const look = subtitleLook(style);
   const subtitleOffset = offsetFor(subtitleOffsets, plan?.file_id, subtitle);
   // A later timing shows each line at its time in the file plus the offset.
@@ -823,10 +856,20 @@ function FilmPlayer({ item: start, startMs, entryId, carryOn, fileId, together: 
   };
 
   const control = (icon: string, text: string, onClick: () => void, id?: string) => (
-    <Focusable key={id ?? text} className="ctl" spotlightId={id} onClick={onClick} onFocus={() => setLabel(id === 'player-play' ? PLAY_LABEL : text)} onBlur={() => setLabel(null)}>
+    <Focusable key={id ?? text} className="ctl" spotlightId={id} onClick={onClick} onFocus={() => setLabel(text)} onBlur={() => setLabel(null)}>
       <Icon name={icon} size={40} />
     </Focusable>
   );
+  /** Another episode of the season from the Episodes tab (in a room, for everyone). */
+  const playEpisode = (ep: Item) => {
+    const at = ep.user_data?.played ? 0 : ep.user_data?.position_ms ?? 0;
+    if (ep.id === item.id) { closeTab(); return; }
+    if (sessionRef.current) { setTab(null); roomCommand((x) => x.changeItem(ep.id, at)); return; }
+    nav.play(ep, at, { replace: true });
+  };
+  const tabs: Tab[] = (['info', 'chapters', 'cast', 'episodes'] as Tab[]).filter((x) =>
+    x === 'info' ? !!plan : x === 'chapters' ? chapters.length > 1 : x === 'cast' ? castList.length > 0 : seasonEpisodes.length > 0);
+  const tabName = (x: Tab) => (x === 'info' ? t('player.tabInfo') : x === 'chapters' ? t('player.chapters') : x === 'cast' ? t('details.cast') : t('player.tabEpisodes'));
 
   const pct = (ms: number) => (duration ? `${Math.max(0, Math.min(100, (ms / duration) * 100))}%` : '0%');
 
@@ -882,58 +925,106 @@ function FilmPlayer({ item: start, startMs, entryId, carryOn, fileId, together: 
                 {t(marker.kind === 'recap' ? 'player.skipRecap' : marker.kind === 'credits' ? (shownNext ? 'player.playNext' : 'player.skipCredits') : 'player.skipIntro')}
               </Button>
             )}
-            <div className="ctl-head">
-              <div className="ctl-heading">
-                {subtitleLine && <div className="ctl-sub">{subtitleLine}</div>}
-                <div className="ctl-title">{title}</div>
+            {tab ? (
+              // Up from the card goes back to the timeline.
+              <div className="osd-card" onKeyDown={(e: React.KeyboardEvent) => { if (e.keyCode === 38) { e.preventDefault(); e.stopPropagation(); closeTab(); } }}>
+                {tab === 'info' && plan && <InfoCard item={item} plan={plan} onRestart={() => { closeTab(); commitSeek(0); }} />}
+                {tab === 'chapters' && (
+                  <Strip start={0}>
+                    {chapters.map((c, i) => (
+                      <Focusable key={c.start_ms} className={`osd-tile osd-chapter${i === chapterAt ? ' current' : ''}`} onClick={() => { closeTab(); commitSeek(c.start_ms); }}>
+                        <div className="osd-tile-title">{c.title || t('player.chapterNumber', { n: i + 1 })}</div>
+                        <div className="muted">{formatTime(c.start_ms)}</div>
+                      </Focusable>
+                    ))}
+                  </Strip>
+                )}
+                {tab === 'cast' && (
+                  <Strip start={0}>
+                    {castList.map((c) => <PersonCard key={c.person_id} name={c.name} image={c.image} sub={c.character} onClick={() => {}} />)}
+                  </Strip>
+                )}
+                {tab === 'episodes' && (
+                  <Strip start={0}>
+                    {seasonEpisodes.map((ep) => (
+                      <div key={ep.id} className="osd-episode">
+                        <Focusable className={`osd-episode-art${ep.id === item.id ? ' current' : ''}`} onClick={() => playEpisode(ep)}>
+                          <Artwork path={cardFor(ep).thumb} label={ep.title} className="ratio-16x9" />
+                          <span className="osd-code">{episodeCode(ep)}</span>
+                        </Focusable>
+                        <div className="card-title">{ep.title}</div>
+                      </div>
+                    ))}
+                  </Strip>
+                )}
               </div>
-              <div className="ctl-side">
-                <div className="ctl-label">{label === PLAY_LABEL ? t(playing ? 'player.pause' : 'player.play') : label}</div>
-                <Container className="ctl-row">
-                  {control(playing ? 'pause' : 'play', t(playing ? 'player.pause' : 'player.play'), togglePlay, 'player-play')}
-                  {shownNext && control('next', t('player.next', { title: shownNext.item.title }), playNext)}
-                  {control('back10', t('player.back10'), () => seekBy(-10000))}
-                  {control('fwd10', t('player.forward10'), () => seekBy(10000))}
-                  <span className="ctl-gap" />
-                  {s && control('users', t('together.title'), () => setRoomPanel('panel'))}
-                  {plan && (plan.audio_tracks ?? []).length > 1 && control('audio', t('player.audio'), () => setMenu('audio'))}
-                  {plan && subtitleTracks.length > 0 && control('captions', t('player.subtitles'), () => setMenu('subtitles'), 'player-subtitles')}
-                  {plan && (plan.versions ?? []).length > 1 && control('film', t('player.version'), () => setMenu('version'))}
-                  {plan && control('sliders', t('player.quality'), () => setMenu('quality'))}
-                  {plan && chapters.length > 1 && control('list', t('player.chapters'), () => setMenu('chapters'))}
-                  {/* In a room everyone plays at the room's speed. */}
-                  {!s && player.current?.setSpeed && control('gauge', t('player.speed'), () => setMenu('speed'))}
-                  {plan && control('info', t('player.info'), () => setMenu('info'))}
-                </Container>
+            ) : (
+              <div>
+                <div className="ctl-head">
+                  <div className="ctl-heading">
+                    {subtitleLine && <div className="ctl-sub">{subtitleLine}</div>}
+                    <div className="ctl-title">{title}</div>
+                  </div>
+                  <div className="ctl-side">
+                    <div className="ctl-label">{label}</div>
+                    {/* Android's three: Playback (speed, quality, version, info, Watch Together), Audio, Subtitles. Play, pause and seeking are the remote's. */}
+                    <Container className="ctl-row">
+                      {plan && control('gauge', t('player.playback'), () => setMenu('playback'), 'player-playback')}
+                      {plan && (plan.audio_tracks ?? []).length > 1 && control('audio', t('player.audio'), () => setMenu('audio'))}
+                      {plan && subtitleTracks.length > 0 && control('captions', t('player.subtitles'), () => setMenu('subtitles'), 'player-subtitles')}
+                    </Container>
+                  </div>
+                </div>
+                <Focusable
+                  className="timeline"
+                  spotlightId="player-play"
+                  onClick={togglePlay}
+                  onFocus={() => setLabel(null)}
+                  onKeyDown={(e: React.KeyboardEvent) => {
+                    if (e.keyCode !== 37 && e.keyCode !== 39) return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const base = scrub ?? pos;
+                    setScrub(Math.max(0, Math.min(duration, base + (e.keyCode === 39 ? 10000 : -10000))));
+                  }}
+                >
+                  <div className="tl-track" />
+                  <div className="tl-buffered" style={{ width: pct(buffered) }} />
+                  <div className="tl-played" style={{ width: pct(shown) }} />
+                  {chapters.slice(1).map((c) => <div key={c.start_ms} className="tl-chapter" style={{ left: pct(c.start_ms) }} />)}
+                  <div className="tl-knob" style={{ left: pct(shown) }} />
+                  {scrub !== null && trick && <Thumb tp={trick} ms={scrub} left={duration ? (scrub / duration) * 1728 : 0} />}
+                </Focusable>
+                {/* The time played under the playhead (with play or pause), the time left at the end. */}
+                <div className="ctl-times">
+                  <span className="tl-now" style={{ left: duration ? `${Math.min(88, Math.max(0, (shown / duration) * 100))}%` : 0 }}>
+                    <Icon name={playing && scrub === null ? 'play' : 'pause'} size={22} /> {formatTime(shown)}
+                  </span>
+                  <span className="tl-left">-{formatTime(Math.max(0, duration - shown))}</span>
+                </div>
               </div>
-            </div>
-            <Focusable
-              className="timeline"
-              onFocus={() => setLabel(null)}
-              onKeyDown={(e: React.KeyboardEvent) => {
-                if (e.keyCode !== 37 && e.keyCode !== 39) return;
-                e.preventDefault();
-                e.stopPropagation();
-                const base = scrub ?? pos;
-                setScrub(Math.max(0, Math.min(duration, base + (e.keyCode === 39 ? 10000 : -10000))));
-              }}
-            >
-              <div className="tl-track" />
-              <div className="tl-buffered" style={{ width: pct(buffered) }} />
-              <div className="tl-played" style={{ width: pct(shown) }} />
-              {chapters.slice(1).map((c) => <div key={c.start_ms} className="tl-chapter" style={{ left: pct(c.start_ms) }} />)}
-              <div className="tl-knob" style={{ left: pct(shown) }} />
-              {scrub !== null && trick && <Thumb tp={trick} ms={scrub} left={duration ? (scrub / duration) * 1728 : 0} />}
-              {scrub !== null && <div className="tl-time" style={{ left: pct(scrub) }}>{formatTime(scrub)}</div>}
-            </Focusable>
-            <div className="ctl-times">
-              <span>{formatTime(shown)}</span>
-              <span>-{formatTime(Math.max(0, duration - shown))}</span>
-            </div>
+            )}
+            {tabs.length > 0 && (
+              <Container className="osd-tabs">
+                {tabs.map((x) => (
+                  <Focusable key={x} className={`osd-tab${tab === x ? ' open' : ''}`} onFocus={() => setTab(x)}>{tabName(x)}</Focusable>
+                ))}
+              </Container>
+            )}
           </div>
         </Container>
       )}
-      {menu && plan && (
+      {menu === 'playback' && plan && (
+        <Popover place="above" shade={false} title={t('player.playback')} onClose={() => setMenu(null)}>
+          {s && <PopoverItem first icon="users" label={t('together.title')} onClick={() => { setMenu(null); setRoomPanel('panel'); }} />}
+          {/* In a room everyone plays at the room's speed. */}
+          {!s && player.current?.setSpeed && <PopoverItem first icon="gauge" label={t('player.speed')} detail={speed === 1 ? t('player.normal') : `${speed}×`} onClick={() => setMenu('speed')} />}
+          <PopoverItem first={!s && !player.current?.setSpeed} icon="sliders" label={t('player.quality')} onClick={() => setMenu('quality')} />
+          {(plan.versions ?? []).length > 1 && <PopoverItem icon="film" label={t('player.version')} onClick={() => setMenu('version')} />}
+          <PopoverItem icon="info" label={t('player.info')} onClick={() => setMenu('info')} />
+        </Popover>
+      )}
+      {menu && menu !== 'playback' && plan && (
         <PlayerMenu
           menu={menu}
           plan={plan}
@@ -973,8 +1064,32 @@ function FilmPlayer({ item: start, startMs, entryId, carryOn, fileId, together: 
   );
 }
 
-/** The play/pause button's label follows the state while it has the focus. */
-const PLAY_LABEL = '\u0000play';
+/** The Info tab's card, as Android's: a picture, the title, overview, details and how it plays, and Restart. */
+function InfoCard({ item, plan, onRestart }: { item: Item; plan: Playback; onRestart: () => void }) {
+  const [method] = methodLabel(plan);
+  const meta = [item.kind === 'episode' ? episodeCode(item) : item.year ? String(item.year) : '', item.runtime_min ? t('details.minutes', { n: item.runtime_min }) : '', item.release_date && item.kind === 'episode' ? item.release_date : ''].filter(Boolean).join(' · ');
+  const file = (item.files ?? []).filter((f) => f.id === plan.file_id);
+  return (
+    <div className="osd-info">
+      <div className="osd-info-art"><Artwork path={cardFor(item).thumb} label={item.title} className="ratio-16x9" /></div>
+      <div className="osd-info-text">
+        <div className="osd-info-title">{item.title}</div>
+        {meta && <div className="muted">{meta}</div>}
+        {item.overview && <div className="osd-info-overview">{item.overview}</div>}
+        <div className="hero-meta">
+          {formatCapsules(file.length ? file : item.files).map((c, i) => (
+            <span key={i} className={`capsule${c.filled ? ' filled' : ''}`}>{c.parts.map((x, j) => <span key={j} className={`capsule-part${j ? ' split' : ''}`}>{x}</span>)}</span>
+          ))}
+          <span className="muted">{method}</span>
+        </div>
+      </div>
+      <Container className="osd-info-side">
+        <Focusable className="ctl" onClick={onRestart}><Icon name="restart" size={40} /></Focusable>
+        <div className="osd-info-label">{t('player.restart')}</div>
+      </Container>
+    </div>
+  );
+}
 
 function PlayerMenu({ menu, plan, subtitle, subtitleOffset, quality, speed, chapterAt, caps, onClose, onTiming, onShiftSubtitles, onAudio, onSubtitle, onVersion, onQuality, onChapter, onSpeed }: {
   menu: Exclude<Menu, null>;

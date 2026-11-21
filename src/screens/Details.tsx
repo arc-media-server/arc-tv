@@ -14,7 +14,7 @@ import { Button, Container, Focusable, useInitialFocus } from '../components/spo
 import { Overlay, Popover, PopoverItem } from '../components/Menu';
 import { MediaInfo, MoreMenu, toggleWatched, toggleWatchlist, useCanQueue } from '../components/TitleMenu';
 import { formatRuntime, formatTime, t } from '../i18n';
-import { episodeCode, episodeHeading, formatLabels, languageName, nextEpisode, resumeMs, versionLabel, versionsOf, watched } from '../lib/format';
+import { episodeCode, episodeHeading, formatCapsules, languageName, nextEpisode, resumeMs, versionLabel, versionsOf, watched } from '../lib/format';
 import { useActive, useNav } from '../lib/nav';
 import { prefs, queues, setSeasonPlayed, useChanges, withChanges } from '../lib/store';
 import { shuffled, usePlayAll } from '../lib/playAll';
@@ -60,8 +60,9 @@ function EpisodeCard({ ep, first, unplaced, onPlay }: { ep: Item; first: boolean
         <ProgressLine progress={card.progress} />
       </Pressable>
       <div className="card-caption">
-        {/* "S1 · E4 · Pilot". An episode outside the order has no number in it, so none is shown (as the web). */}
-        <div className="card-title">{unplaced ? ep.title : episodeHeading(ep)}</div>
+        {/* "S1 · E4" ("Special 3") small over the name, as Android. An episode outside the order has no number in it, so none is shown (as the web). */}
+        {!unplaced && episodeCode(ep) && <div className="episode-code">{episodeCode(ep)}</div>}
+        <div className="card-title">{ep.title}</div>
         {ep.overview && <div className="episode-overview">{ep.overview}</div>}
         {sub && <div className="card-sub">{sub}</div>}
       </div>
@@ -85,9 +86,14 @@ function About({ item, meta }: { item: Item; meta: string }) {
     <>
       {item.overview && <p ref={text} className="hero-overview">{item.overview}</p>}
       {cut && <span className="hero-more">{t('details.more')}</span>}
+      {/* The year and running time (or episodes left) and the score, then the quality capsules, as Android. */}
       <div className="hero-meta">
-        <span>{meta}</span>
-        {formatLabels(item.files).map((l) => <span key={l} className="label">{l}</span>)}
+        {meta && <span>{meta}</span>}
+        {formatCapsules(item.files).map((c) => (
+          <span key={c.parts.join('|')} className={`capsule${c.filled ? ' filled' : ''}`}>
+            {c.parts.map((part, i) => <span key={part} className={i > 0 ? 'capsule-part split' : 'capsule-part'}>{part}</span>)}
+          </span>
+        ))}
       </div>
     </>
   );
@@ -101,6 +107,19 @@ function About({ item, meta }: { item: Item; meta: string }) {
         </Overlay>
       )}
     </>
+  );
+}
+
+/** Who's in it and who made it, low on the right of the artwork, level with the buttons (as Android). */
+function HeaderCredits({ item }: { item: Item }) {
+  const names = (role: string) => (item.credits ?? []).filter((c) => c.role === role).slice(0, 3).map((c) => c.name).join(', ');
+  const lines: [string, string][] = [[t('details.info.starring'), names('actor')], [t('details.info.directors'), names('director')]];
+  const shown = lines.filter(([, who]) => who);
+  if (!shown.length) return null;
+  return (
+    <div className="hero-credits">
+      {shown.map(([label, who]) => <div key={label} className="hero-credit"><span className="muted-label">{label}</span> <b>{who}</b></div>)}
+    </div>
   );
 }
 
@@ -315,12 +334,13 @@ export function Details({ id, episodeId }: { id: string; episodeId?: string }) {
     : resume > 0 ? t('details.resume', { time: formatTime(resume) })
       : code ? t('details.playEpisode', { code }) : t('details.play');
   const left = item.unwatched_count ?? 0;
+  // As Android: the age rating and genres above the description; the year, running time (or
+  // episodes left) and score under it.
+  const genres = (item.genres ?? []).slice(0, 3).join(' · ');
   const meta = [
-    (item.genres ?? []).slice(0, 2).join(', '),
-    item.year ? String(item.year) : '',
+    item.year && item.kind !== 'episode' ? String(item.year) : '',
     !series && item.runtime_min ? formatRuntime(item.runtime_min) : '',
     series && left > 0 ? (left === 1 ? t('details.oneEpisodeLeft') : t('details.episodesLeft', { n: left })) : '',
-    item.content_rating ?? '',
     item.rating ? `★ ${item.rating.toFixed(1)}` : '',
   ];
   const canWatchlist = item.kind === 'movie' || series;
@@ -343,9 +363,17 @@ export function Details({ id, episodeId }: { id: string; episodeId?: string }) {
         {/* As Android and the Apple TV app: the artwork fills the screen with everything low on
             it (the logo, the description and details, then the buttons); the rest scrolls up over
             a dimmed copy. */}
-        <section className="details-hero" data-section>
+        <section className={`details-hero${series ? '' : ' details-hero-film'}`} data-section>
+          <div className="hero-row">
+          <div className="hero-main">
           <TitleLogo item={item} />
           {item.kind === 'episode' && <div className="hero-episode">{episodeHeading(item)}</div>}
+          {(item.content_rating || genres) && (
+            <div className="hero-genres">
+              {item.content_rating && <span className="age-rating">{item.content_rating}</span>}
+              {genres && <span>{genres}</span>}
+            </div>
+          )}
           <About item={item} meta={meta.filter(Boolean).join(' · ')} />
           <div className="hero-actions">
               <Container className="actions">
@@ -372,6 +400,9 @@ export function Details({ id, episodeId }: { id: string; episodeId?: string }) {
                 <RoundButton icon="more" label={t('action.more')} onClick={() => setPanel('more')} onLabel={setLabel} />
               </Container>
               <div className="action-label">{label}</div>
+          </div>
+          </div>
+          <HeaderCredits item={item} />
           </div>
         </section>
         {series && seasons && (
