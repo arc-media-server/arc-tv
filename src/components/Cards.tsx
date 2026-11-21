@@ -85,7 +85,7 @@ export function cardTitle(card: Card): string {
 function cardSubtitle(card: Card): string {
   const it = card.item;
   if (card.sub !== undefined) return card.sub;
-  if (card.seasonNumber !== undefined) return `${t('details.season', { n: card.seasonNumber })} · ${t('details.newEpisodes', { n: card.newEpisodes ?? 0 })}`;
+  if (card.seasonNumber !== undefined) return t('details.season', { n: card.seasonNumber });
   // Under the show's name, just the number: the episode's title never shares the line.
   if (it.kind === 'episode') return episodeCode(it);
   return it.year ? String(it.year) : '';
@@ -145,7 +145,9 @@ export function MediaCard({ card, look = 'poster', seasonPoster, caption = true,
       >
         {look === 'backdrop' ? <BackdropArt card={shown} /> : shown.mosaic && shown.mosaic.length >= 4 ? <Mosaic paths={shown.mosaic} /> : <Artwork path={art} label={cardTitle(shown)} className={thumb ? 'ratio-16x9' : 'ratio-2x3'} />}
         {shown.tag && <span className="card-tag"><Icon name={shown.tagIcon ?? 'folder'} size={20} /> {shown.tag}</span>}
-        <WatchBadge item={item} />
+        {shown.seasonNumber !== undefined && shown.newEpisodes !== undefined
+          ? <div className="badge count">{shown.newEpisodes}</div>
+          : <WatchBadge item={item} />}
         <ProgressLine progress={shown.progress} />
       </Pressable>
       {caption && (
