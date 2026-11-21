@@ -137,6 +137,19 @@ TV's developer mode, from a computer on the same network. You need:
    tizen install -n out/tizen/Arc.wgt -t <device>
    ```
 
+### Releases
+
+Ready-made builds are on the [Releases](../../releases) page. To make one, open **Actions →
+Build → Run workflow** on `main`: once the checks pass it publishes a pre-release named
+`tv-build-<run>` with the LG `.ipk`, the Samsung app as an unsigned zip (sign it in Tizen Studio
+with your certificate, as above) and a `SHA256SUMS.txt`. Pushing a `v*` tag (`v0.2.0`) makes a
+normal release with that version.
+
+Versions: a build is `package.json`'s major.minor plus the run number (`0.1.57`), stamped into
+`appinfo.json` and `config.xml`, so each build installs over the last. Raise `package.json`'s
+version when a release starts a new minor or major. Nothing runs on pull requests or ordinary
+pushes; a push whose message contains `[build]` makes a run artifact only, never a release.
+
 ### Signing in
 
 Open **Arc** on the TV. It lists the Arc servers it finds on your network (port 8099); pick yours,
