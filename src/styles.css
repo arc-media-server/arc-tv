@@ -316,7 +316,7 @@ p { margin: 0 0 16px; }
 /* Owner-confirmed Android values (server #499), doubled from dp for 1080p. */
 .tabs { display: flex; flex-direction: row; align-items: center; }
 .tab { display: flex; align-items: center; height: 72px; padding: 0 32px; border-radius: 36px; background: var(--pill); font-size: 28px; font-weight: 500; color: var(--text); white-space: nowrap; }
-.tab + .tab { margin-left: 4px; }
+.tab + .tab { margin-left: 20px; }
 .tab.selected { background: var(--pill-selected); }
 .head-buttons .btn { background: var(--pill); }
 .head-buttons .btn.small { font-size: 28px; font-weight: 500; }
