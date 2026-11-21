@@ -43,7 +43,7 @@ video, so files your TV can handle play as they are.
     <td width="50%"><img src="docs/screenshots/show.jpg" alt="Breaking Bad's page, with Resume S1 · E3 and the Season 1 tab"></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/screenshots/library.jpg" alt="Browsing Movies, with Sort, Filters and the A–Z bar"></td>
+    <td width="50%"><img src="docs/screenshots/library.jpg" alt="Movies, with the Recommended, Library and Collections tabs"></td>
     <td width="50%"><img src="docs/screenshots/search.jpg" alt="Searching for Dune: both films and the Dune Collection"></td>
   </tr>
   <tr>
