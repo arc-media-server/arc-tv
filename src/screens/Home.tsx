@@ -130,7 +130,7 @@ export function HomeContent({ prefs, libraries, visits, onReady }: { prefs: Pref
       {heroItem && <HeroBackdrop item={heroItem} dim={scrolled} />}
       <Scroller className="home-page" pad={72} onMove={(o) => setScrolled(o > 40)}>
         {rooms.length > 0 && (
-          <section className="home-row" data-section data-row="watch-together">
+          <section className="home-row home-first" data-section data-row="watch-together">
             {heroBlock}
             <h2 className="row-title" style={{ paddingLeft: START }}>{t('together.rowTitle')}</h2>
             <RoomCards rooms={rooms} start={START} width={WIDTH.thumb} first />
@@ -139,7 +139,7 @@ export function HomeContent({ prefs, libraries, visits, onReady }: { prefs: Pref
         {visible.map((spec, i) => {
           const st = stateOf(spec);
           return (
-            <section key={spec.id} className="home-row" data-section data-row={spec.id}>
+            <section key={spec.id} className={`home-row${i === 0 && !rooms.length && heroBlock ? ' home-first' : ''}`} data-section data-row={spec.id}>
               {i === 0 && !rooms.length && heroBlock}
               <h2 className="row-title" style={{ paddingLeft: START }}>{rowTitle(spec)}</h2>
               {!st.cards && !st.error && <div className="row-loading" style={{ paddingLeft: START }}><div className="spinner" /></div>}

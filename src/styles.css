@@ -291,6 +291,12 @@ p { margin: 0 0 16px; }
 .home-page { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; }
 /* The focused title's hero, with the first row's titles in full just under it, posters too (Android's is 60%). */
 .home-hero { height: 648px; padding: 0 192px 24px; display: flex; flex-direction: column; justify-content: flex-end; }
+/* The hero and the first row fill the screen together: the hero takes what the row leaves, so a
+   taller row (Continue Watching's big cards, posters) never pushes its captions off the bottom. */
+.home-first { display: flex; flex-direction: column; height: 1080px; box-sizing: border-box; }
+.home-first .home-hero { flex: 1 1 auto; height: auto; min-height: 0; overflow: hidden; }
+.home-first > * { flex-shrink: 0; }
+.home-first > .home-hero { flex-shrink: 1; }
 .home-hero-text { max-width: 1040px; }
 .home-hero .title-logo { max-width: 640px; height: 160px; }
 .home-hero .title-name { max-height: 160px; }
@@ -316,7 +322,8 @@ p { margin: 0 0 16px; }
 /* Owner-confirmed Android values (server #499), doubled from dp for 1080p. */
 .tabs { display: flex; flex-direction: row; align-items: center; }
 .tab { display: flex; align-items: center; height: 72px; padding: 0 32px; border-radius: 36px; background: var(--pill); font-size: 28px; font-weight: 500; color: var(--text); white-space: nowrap; }
-.tab + .tab { margin-left: 20px; }
+/* "~", not "+": Spotlight puts a hidden marker after each focusable, so tabs are never adjacent. */
+.tab ~ .tab { margin-left: 20px; }
 .tab.selected { background: var(--pill-selected); }
 .head-buttons .btn { background: var(--pill); }
 .head-buttons .btn.small { font-size: 28px; font-weight: 500; }
