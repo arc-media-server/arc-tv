@@ -4,7 +4,8 @@ import { useLiveRefresh } from '../lib/live-updates';
 import { liveTopics } from '../lib/live-hints';
 import { useActive } from '../lib/nav';
 import { useEffect, useState } from 'react';
-import type { Prefs, Profile } from '../api';
+import { api, type AuthStatus, type Prefs, type Profile } from '../api';
+import { automaticProfile, saveAutomaticProfile } from '../session';
 import { Popover, PopoverItem } from '../components/Menu';
 import { Scroller } from '../components/Scroller';
 import { Container, Focusable } from '../components/spot';
@@ -42,6 +43,20 @@ export function SettingsContent({ profile, serverName, onSwitchServer, onSignOut
   onReady: () => void;
 }) {
   const active = useActive();
+  const [automaticId, setAutomaticId] = useState(automaticProfile);
+  const [deviceProfile, setDeviceProfile] = useState(profile);
+  const refreshDeviceProfile = () => {
+    void api<AuthStatus>('/auth/status').then((status) => setDeviceProfile(status.profile ?? null), () => {});
+  };
+  useEffect(refreshDeviceProfile, [profile]);
+  useLiveRefresh(liveTopics.prefs, active, refreshDeviceProfile);
+  const automatic = !!deviceProfile && !deviceProfile.has_pin && automaticId === deviceProfile.id;
+  const toggleAutomatic = () => {
+    if (!deviceProfile || deviceProfile.has_pin) return;
+    const id = automatic ? null : deviceProfile.id;
+    if (saveAutomaticProfile(id)) setAutomaticId(id);
+    else toast(t('settings.saveFailed'));
+  };
   const [p, setP] = useState<Prefs | null>(null);
   const [picking, setPicking] = useState<Picking | null>(null);
   useEffect(() => {
@@ -113,6 +128,19 @@ export function SettingsContent({ profile, serverName, onSwitchServer, onSignOut
           </section>
           <section data-section>
             <h2 className="settings-heading">{t('settings.thisTv')}</h2>
+            {deviceProfile && (
+              <Focusable className="settings-row settings-row-described" role="switch" aria-checked={automatic}
+                aria-disabled={deviceProfile.has_pin} onClick={toggleAutomatic} aria-label={t('settings.automaticSignIn')}
+                aria-describedby="automatic-sign-in-description">
+                <div className="settings-label">
+                  {t('settings.automaticSignIn')}
+                  <div className="settings-description" id="automatic-sign-in-description">
+                    {deviceProfile.has_pin ? t('settings.automaticSignInPin') : t('settings.automaticSignInHint', { name: deviceProfile.name })}
+                  </div>
+                </div>
+                <span className="settings-value">{onOff(automatic)}</span>
+              </Focusable>
+            )}
             <Row label={t('settings.server')} value={serverName} onClick={onSwitchServer} />
             <Row label={t('settings.signOut')} value="" onClick={onSignOut} />
             <p className="settings-note">{t('settings.serverNote')}</p>

@@ -6,6 +6,25 @@ export interface SavedServer { url: string; name: string; id: string }
 
 const SERVER = 'arc.server';
 const TOKEN = 'arc.token';
+const AUTO_PROFILE = 'arc.autoProfile';
+
+export function automaticProfile(): string | null {
+  try {
+    return localStorage.getItem(AUTO_PROFILE);
+  } catch {
+    return null;
+  }
+}
+
+export function saveAutomaticProfile(id: string | null): boolean {
+  try {
+    if (id) localStorage.setItem(AUTO_PROFILE, id);
+    else localStorage.removeItem(AUTO_PROFILE);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export function loadSession(): { server: SavedServer | null; token: string } {
   let server: SavedServer | null = null;
@@ -24,7 +43,10 @@ export function saveServer(server: SavedServer) {
 
 export function saveToken(token: string) {
   if (token) localStorage.setItem(TOKEN, token);
-  else localStorage.removeItem(TOKEN);
+  else {
+    saveAutomaticProfile(null);
+    localStorage.removeItem(TOKEN);
+  }
   configure({ token });
 }
 
