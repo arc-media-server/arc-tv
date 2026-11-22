@@ -1,16 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Icon } from '../components/Icon';
-import { Scroller } from '../components/Scroller';
+import { Overlay } from '../components/Menu';
 import { Container, Focusable } from '../components/spot';
 import { t } from '../i18n';
 import { joinRoom, type JoinProblem } from '../lib/together';
 import { CODE_ALPHABET, CODE_LENGTH, formatCode, keyToCodeChar, typeCode } from '../lib/watch-together';
-import { START } from './Home';
-import { RoomCards, useRooms } from '../components/RoomsRow';
 
-// The sidebar's Watch Together page (Android's TogetherPage, after Playlists, when Arc offers
-// Watch Together): Join with a Code, then the Rooms this profile made, was invited to or is in. The code is typed with the remote's number keys, or with the
-// letters and digits on screen (arrows and OK); the dash is added. App opens the room's player.
+// Join Watch Together, from the profile at the top of the sidebar (as the web's profile menu):
+// the code the host shared, typed with the remote's number keys, or with the letters and digits
+// on screen (arrows and OK); the dash is added. App opens the room's player. Rooms this profile
+// made or was invited to are on Home's Watch Together row.
 
 const ROWS: string[] = [];
 for (let i = 0; i < CODE_ALPHABET.length; i += 8) ROWS.push(CODE_ALPHABET.slice(i, i + 8));
@@ -21,13 +20,10 @@ const problems: Record<JoinProblem, string> = {
   failed: 'together.joinFailed',
 };
 
-export function TogetherContent({ onReady }: { onReady: () => void }) {
+export function JoinTogether({ onClose }: { onClose: () => void }) {
   const [code, setCode] = useState('');
   const [problem, setProblem] = useState<JoinProblem | null>(null);
   const [joining, setJoining] = useState(false);
-  const rooms = useRooms(null);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { onReady(); }, []);
 
   const type = (key: string) => {
     setProblem(null);
@@ -39,7 +35,10 @@ export function TogetherContent({ onReady }: { onReady: () => void }) {
     void joinRoom(code).then((p) => {
       setJoining(false);
       setProblem(p);
-      if (!p) setCode('');
+      if (!p) {
+        setCode('');
+        onClose();
+      }
     });
   };
   // The remote's number keys (and a keyboard's letters in the browser build) type at once;
@@ -61,10 +60,8 @@ export function TogetherContent({ onReady }: { onReady: () => void }) {
   const slots: string[] = [];
   for (let i = 0; i < CODE_LENGTH; i++) slots.push(code[i] ?? '');
   return (
-    <div className="settings">
-      <Scroller className="settings-page" pad={80}>
-        <h1 className="page-title settings-title" style={{ paddingLeft: START }}>{t('together.title')}</h1>
-        <div className="join-code" style={{ marginLeft: START }} onKeyDown={onKey}>
+    <Overlay width={960} onClose={onClose}>
+        <div className="join-code" onKeyDown={onKey}>
           <h2 className="settings-heading">{t('together.joinTitle')}</h2>
           <p className="settings-note">{t('together.joinBody')}</p>
           <div className="code-slots" aria-label={shown}>
@@ -87,13 +84,6 @@ export function TogetherContent({ onReady }: { onReady: () => void }) {
             </div>
           </Container>
         </div>
-        {rooms.length > 0 && (
-          <section className="home-row together-rooms" data-section>
-            <h2 className="row-title" style={{ paddingLeft: START }}>{t('together.rooms')}</h2>
-            <RoomCards rooms={rooms} start={START} width={472} />
-          </section>
-        )}
-      </Scroller>
-    </div>
+    </Overlay>
   );
 }

@@ -14,7 +14,8 @@ import { LibraryContent, WatchlistContent } from './Library';
 import { PlaylistsContent } from './Playlists';
 import { SearchContent } from './Search';
 import { SettingsContent } from './Settings';
-import { TogetherContent } from './Together';
+import { JoinTogether } from './Together';
+import { Popover, PopoverItem } from '../components/Menu';
 import { useCanTogether } from '../lib/together';
 
 // Live updates
@@ -22,10 +23,10 @@ import { useLiveRefresh } from '../lib/live-updates';
 import { liveTopics } from '../lib/live-hints';
 
 // The main screen, as the Android app's BrowseScreen: a rail down the left (Search, Home, the
-// libraries with the Watchlist where the profile put it, Playlists and Watch Together after them, and the profile at the bottom) that opens
+// libraries with the Watchlist where the profile put it, Playlists after them, and the profile at the bottom) that opens
 // into labels when it has the focus, and the chosen section beside it.
 
-export type Section = { kind: 'home' } | { kind: 'search' } | { kind: 'watchlist' } | { kind: 'playlists' } | { kind: 'together' } | { kind: 'settings' } | { kind: 'library'; id: number; genre?: string; fromSearch?: boolean };
+export type Section = { kind: 'home' } | { kind: 'search' } | { kind: 'watchlist' } | { kind: 'playlists' } | { kind: 'settings' } | { kind: 'library'; id: number; genre?: string; fromSearch?: boolean };
 
 const same = (a: Section, b: Section) => a.kind === b.kind && (a.kind !== 'library' || a.id === (b as { id: number }).id);
 
@@ -78,6 +79,10 @@ export function Browse({ profile, canSwitchProfile, serverName, onSwitchProfile,
   const [visits, setVisits] = useState(0);
   const [prefs, setPrefs] = useState<Prefs | null>(null);
   const canTogether = useCanTogether();
+  // With Watch Together, choosing the profile offers Switch Profile and Join Watch Together, as
+  // the web's profile menu; without it, it switches profile at once.
+  const [profileMenu, setProfileMenu] = useState(false);
+  const [joining, setJoining] = useState(false);
 
   const load = useCallback(() => {
     setError('');
@@ -152,7 +157,6 @@ export function Browse({ profile, canSwitchProfile, serverName, onSwitchProfile,
         {section.kind === 'search' && <SearchContent onReady={ready} onGenre={(g) => setSection({ kind: 'library', id: g.library_id, genre: g.name, fromSearch: true })} />}
         {section.kind === 'watchlist' && <WatchlistContent visits={visits} onReady={ready} />}
         {section.kind === 'playlists' && <PlaylistsContent visits={visits} onReady={ready} />}
-        {section.kind === 'together' && <TogetherContent onReady={ready} />}
         {section.kind === 'settings' && <SettingsContent profile={profile} serverName={serverName} onSwitchServer={onSwitchServer} onSignOut={onSignOut} onReady={ready} />}
         {lib && <LibraryContent key={`${lib.id}:${section.kind === 'library' ? section.genre ?? '' : ''}`} library={lib} genre={section.kind === 'library' ? section.genre : undefined} visits={visits} onReady={ready} />}
       </Container>
@@ -168,7 +172,7 @@ export function Browse({ profile, canSwitchProfile, serverName, onSwitchProfile,
           <ArcLogo kind="logo" />
         </div>
         {profile && canSwitchProfile && (
-          <SidebarItem icon={<Avatar profile={profile} size={36} />} label={profile.name} extra={<Clock />} selected={false} onClick={onSwitchProfile} />
+          <SidebarItem icon={<Avatar profile={profile} size={36} />} label={profile.name} extra={<Clock />} selected={false} onClick={() => (canTogether ? setProfileMenu(true) : onSwitchProfile())} />
         )}
         {!canSwitchProfile && <SidebarItem icon={<Icon name="out" />} label={t('nav.signOut')} extra={<Clock />} selected={false} onClick={onSignOut} />}
         <div className="side-gap" />
@@ -176,10 +180,16 @@ export function Browse({ profile, canSwitchProfile, serverName, onSwitchProfile,
         <SidebarItem icon={<Icon name="home" />} label={t('nav.home')} selected={section.kind === 'home'} onClick={() => show({ kind: 'home' })} />
         {items}
         <SidebarItem icon={<Icon name="playlist" />} label={t('nav.playlists')} selected={section.kind === 'playlists'} onClick={() => show({ kind: 'playlists' })} />
-        {canTogether && <SidebarItem icon={<Icon name="users" />} label={t('together.title')} selected={section.kind === 'together'} onClick={() => show({ kind: 'together' })} />}
         <div className="side-spacer" />
         <SidebarItem icon={<Icon name="gear" />} label={t('nav.settings')} selected={section.kind === 'settings'} onClick={() => show({ kind: 'settings' })} />
       </EntryContainer>
+      {profileMenu && (
+        <Popover onClose={() => setProfileMenu(false)}>
+          <PopoverItem icon="" label={t('nav.switchProfile')} first onClick={() => { setProfileMenu(false); onSwitchProfile(); }} />
+          <PopoverItem icon="users" label={t('together.joinMenu')} onClick={() => { setProfileMenu(false); setJoining(true); }} />
+        </Popover>
+      )}
+      {joining && <JoinTogether onClose={() => setJoining(false)} />}
     </div>
   );
 }
