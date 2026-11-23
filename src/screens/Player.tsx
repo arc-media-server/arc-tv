@@ -1,3 +1,4 @@
+import { recordDeviceEvent } from '../lib/device-logs';
 import { useSpoilerItem } from '../lib/useSpoilers';
 import { InvitePicker } from '../components/InvitePicker';
 import { EndedPane, LeaveConfirm, RoomCard, RoomPill, useRoomNotice, WaitingPill } from '../components/Together';
@@ -372,10 +373,12 @@ function FilmPlayer({ item: start, startMs, entryId, carryOn, fileId, together: 
     if (p && !retried.current && p.method !== 'transcode') {
       retried.current = true;
       attempt.current = p.method === 'direct' ? 'remux' : 'convert';
+      recordDeviceEvent('debug', 'playback_requested');
       console.info(`Arc: ${p.method} playback failed here (${why}); asking Arc to convert more`);
       void load(position());
       return;
     }
+    recordDeviceEvent('error', 'playback_failed');
     console.warn(`Arc: playback failed: ${why}`);
     setLoading(false);
     setFailed(why);

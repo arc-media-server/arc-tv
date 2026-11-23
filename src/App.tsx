@@ -4,6 +4,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import platform from '@platform';
 import { api, ApiError, enc, type AuthStatus, type Extra, type Item, type Profile } from './api';
 import { Splash } from './components/ArcLogo';
+import { Popover, PopoverItem } from './components/Menu';
+import { acknowledgeCrash, hasPreviousCrash, installDeviceLogs, recordDeviceEvent } from './lib/device-logs';
+import { sendDeviceLogs } from './lib/send-logs';
 import { CardMenuHost } from './components/TitleMenu';
 import { Container, focusElement } from './components/spot';
 import type { FoundServer } from './discovery';
@@ -48,7 +51,11 @@ let keys = 0;
 // The app is a stack of screens. Screens under the top one stay mounted (hidden), so coming back
 // to Home or a library finds it as it was, focus included. Back closes whatever is open on the
 // screen first (lib/back.ts), then pops the screen; Back on the first screen leaves the app.
+installDeviceLogs();
+
 function App() {
+  const [crashPrompt, setCrashPrompt] = useState(hasPreviousCrash);
+  const [sendingCrash, setSendingCrash] = useState(false);
   const [server, setServer] = useState<SavedServer | null>(null);
   const [status, setStatus] = useState<AuthStatus | null>(null);
   const [stack, setStack] = useState<Entry[]>([{ key: ++keys, screen: { name: 'starting' } }]);
@@ -98,11 +105,15 @@ function App() {
       }
       setStatus({ ...s, profile });
       if (!profile) {
-        if (fresh) console.info("Arc: starting at Who's watching");
+        if (fresh) {
+          console.info("Arc: starting at Who's watching");
+          recordDeviceEvent('info', 'profile_picker');
+        }
         return reset({ name: 'profiles' });
       }
       if (fresh && !s.friend && profile.id === saved) {
         console.info('Arc: signing in automatically as the saved profile');
+        recordDeviceEvent('info', 'automatic_sign_in');
       }
       reset({ name: 'browse' });
       // Back in a Watch Together room this TV and profile were in (a relaunch within 30 s).
@@ -289,6 +300,18 @@ function App() {
   return (
     <NavContext.Provider value={nav}>
       <CardMenuHost>
+        {status?.profile && crashPrompt && hasPreviousCrash() && !sendingCrash && (
+          <Popover title={t('diagnostics.crash')} onClose={() => { acknowledgeCrash(); setCrashPrompt(false); }}>
+            <PopoverItem first icon="" label={t('diagnostics.send')} onClick={() => {
+              setSendingCrash(true);
+              void sendDeviceLogs().then(sent => {
+                if (sent) { acknowledgeCrash(); setCrashPrompt(false); }
+                setSendingCrash(false);
+              });
+            }} />
+            <PopoverItem icon="" label={t('common.cancel')} onClick={() => { acknowledgeCrash(); setCrashPrompt(false); }} />
+          </Popover>
+        )}
         {stack.map((e, i) => {
           const active = i === stack.length - 1;
           return (
