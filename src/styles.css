@@ -512,6 +512,9 @@ p { margin: 0 0 16px; }
 .settings-row.spottable:focus { background: var(--text); color: var(--bg); transform: none; box-shadow: none; }
 .settings-label { flex: 1 1 auto; font-size: 28px; font-weight: 500; }
 .settings-value { font-size: 26px; color: var(--muted); margin-left: 24px; white-space: nowrap; }
+.settings-row-described { height: auto; min-height: 108px; padding-top: 12px; padding-bottom: 12px; }
+.settings-description { font-size: 22px; font-weight: 400; opacity: 0.78; margin-top: 4px; }
+.settings-row[aria-disabled="true"]:not(:focus) .settings-value { opacity: 0.65; }
 .settings-row:focus .settings-value { color: #555; }
 .settings-note { font-size: 22px; color: var(--muted); margin: 8px 24px 0; max-width: 1000px; }
 .centered-fill { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; display: flex; align-items: center; justify-content: center; }

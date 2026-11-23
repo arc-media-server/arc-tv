@@ -8,12 +8,13 @@ import { CardMenuHost } from './components/TitleMenu';
 import { Container, focusElement } from './components/spot';
 import type { FoundServer } from './discovery';
 import { t } from './i18n';
+import { launchProfile } from './lib/launch';
 import { handleBack } from './lib/back';
 import { ActiveContext, NavContext, type Nav, type PlayOptions } from './lib/nav';
 import { resetProfile } from './lib/store';
 import { recoverRoom, resetTogether, together } from './lib/together';
 import { useToast } from './lib/toast';
-import { forgetServer, loadSession, saveServer, saveToken, type SavedServer } from './session';
+import { automaticProfile, forgetServer, loadSession, saveServer, saveToken, type SavedServer } from './session';
 import { Browse } from './screens/Browse';
 import { CollectionPage } from './screens/Collection';
 import { PlaylistPage } from './screens/Playlists';
@@ -71,19 +72,47 @@ function App() {
     setStack(st.slice(0, -1));
   }, []);
 
-  // Where to start: no server -> pick one; no token -> sign in; no profile -> pick one.
-  const resume = useCallback(async () => {
+  const freshLaunch = useRef(true);
+  const start = useCallback(async (fresh: boolean) => {
     try {
       const s = await api<AuthStatus>('/auth/status');
-      setStatus(s);
-      if (!s.signed_in) return reset({ name: 'signin' });
-      if (!s.profile) return reset({ name: 'profiles' });
+      if (!s.signed_in) {
+        saveToken('');
+        setStatus(null);
+        return reset({ name: 'signin' });
+      }
+
+      const saved = automaticProfile();
+      let profile = launchProfile(s, saved, fresh);
+      if (profile && profile.id !== s.profile?.id) {
+        try {
+          profile = await api<Profile>('/auth/profile', { method: 'POST', body: { id: profile.id } });
+        } catch (e) {
+          if (!(e instanceof ApiError) || e.status < 400 || e.status >= 500) throw e;
+          console.warn('Arc: automatic profile sign-in failed (HTTP %d)', e.status);
+          profile = null;
+        }
+      }
+      if (!profile && fresh && s.profile && !s.friend) {
+        await api('/auth/profile', { method: 'DELETE' });
+      }
+      setStatus({ ...s, profile });
+      if (!profile) {
+        if (fresh) console.info("Arc: starting at Who's watching");
+        return reset({ name: 'profiles' });
+      }
+      if (fresh && !s.friend && profile.id === saved) {
+        console.info('Arc: signing in automatically as the saved profile');
+      }
       reset({ name: 'browse' });
       // Back in a Watch Together room this TV and profile were in (a relaunch within 30 s).
       void recoverRoom();
     } catch (e) {
-      if (e instanceof ApiError && e.status === 401) reset({ name: 'signin' });
-      else setFatal((e as Error).message);
+      if (e instanceof ApiError && e.status === 401) {
+        saveToken('');
+        setStatus(null);
+        reset({ name: 'signin' });
+      } else setFatal((e as Error).message);
     }
   }, [reset]);
 
@@ -92,9 +121,19 @@ function App() {
       const saved = loadSession();
       setServer(saved.server);
       if (!saved.server) reset({ name: 'servers' });
-      else void resume();
+      else if (!saved.token) {
+        saveToken('');
+        reset({ name: 'signin' });
+      } else {
+        // A TV resume keeps this document alive. The browser preview also keeps the profile on reload.
+        if (platform.id === 'browser') {
+          const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
+          freshLaunch.current = navigation?.type !== 'reload';
+        }
+        void start(freshLaunch.current);
+      }
     });
-  }, [resume, reset]);
+  }, [start, reset]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -164,7 +203,7 @@ function App() {
       else push(screen);
     }, () => { opening.current = null; });
   }), [push, replace]);
-  useEffect(() => together.ended.subscribe((why) => { if (why === 'signedOut') void resume(); }), [resume]);
+  useEffect(() => together.ended.subscribe((why) => { if (why === 'signedOut') void start(false); }), [start]);
 
   const nav = useMemo<Nav>(() => ({
     open: (it) => push(it.kind === 'episode' && it.parent_id ? { name: 'details', id: it.parent_id, episodeId: it.id } : { name: 'details', id: it.id }),
@@ -185,7 +224,7 @@ function App() {
       <div className="screen centered">
         <p className="error">{fatal}</p>
         <Container className="inline">
-          <button className="btn" onClick={() => { setFatal(''); void resume(); }}>{t('common.retry')}</button>
+          <button className="btn" onClick={() => { setFatal(''); void start(freshLaunch.current); }}>{t('common.retry')}</button>
           <button className="btn" onClick={() => { setFatal(''); forgetServer(); reset({ name: 'servers' }); }}>{t('link.otherServer')}</button>
         </Container>
       </div>
