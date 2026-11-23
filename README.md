@@ -24,7 +24,7 @@
 ## What is Arc for LG and Samsung TVs?
 
 The [Arc Media Server](https://github.com/arc-media-server/arc-media-server) app for LG and
-Samsung smart TVs. If you use Plex or Jellyfin, it's the same idea: your films and shows live on
+Samsung smart TVs. If you.ve used other media servers, it's the same idea: your films and shows live on
 your own server at home, and this app shows them on the TV, with no extra box plugged in. You
 sign in once with a short code, pick who's watching, and browse with the remote.
 
