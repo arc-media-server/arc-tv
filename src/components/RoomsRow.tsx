@@ -9,8 +9,7 @@ import { CardMenuContext, MediaCard, Strip } from './Cards';
 import { Popover, PopoverItem } from './Menu';
 import { Container } from './spot';
 
-// Home's Watch Together row (Android's and the Apple TV app's: first among the rows while there are
-// rooms) and the Watch Together page's Rooms: rooms this profile made, was invited to or is in.
+// Home's Watch Together row (under Continue Watching while there are rooms, in every Arc app) and the Watch Together page's Rooms: rooms this profile made, was invited to or is in.
 // Each card is the room's title, "You're hosting" or "Hosted by Jo" under it, and "Watching now"
 // while it plays. OK opens the room's menu: who's here and who's invited, Join (or Return) and
 // Decline (or Cancel, for its maker). Arc's `watch_together` hint keeps it current.
