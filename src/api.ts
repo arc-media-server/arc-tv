@@ -138,6 +138,7 @@ export interface Item {
   parent_id?: string;
   title: string;
   year?: number;
+  edition?: string;
   overview?: string;
   tagline?: string;
   release_date?: string;

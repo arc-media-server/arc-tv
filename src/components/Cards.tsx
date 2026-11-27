@@ -3,7 +3,7 @@ import { createContext, useContext, useRef, type ReactNode } from 'react';
 import type { Extra, Item } from '../api';
 import { formatRuntime, t, tMaybe } from '../i18n';
 import { cardFor, type Card, type CardStyle } from '../lib/home';
-import { episodeCode } from '../lib/format';
+import { episodeCode, yearAndEdition } from '../lib/format';
 import { useChanges, withChanges } from '../lib/store';
 import { Artwork, useArtwork } from './Artwork';
 import { Icon } from './Icon';
@@ -88,7 +88,7 @@ function cardSubtitle(card: Card): string {
   if (card.seasonNumber !== undefined) return t('details.season', { n: card.seasonNumber });
   // Under the show's name, just the number: the episode's title never shares the line.
   if (it.kind === 'episode') return episodeCode(it);
-  return it.year ? String(it.year) : '';
+  return yearAndEdition(it);
 }
 
 /** A Backdrops card (Home's "Arc" look): the background art with the title's logo low on it. */
