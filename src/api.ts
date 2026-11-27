@@ -1,3 +1,5 @@
+import { recordDeviceEvent } from './lib/device-logs';
+
 // Arc's /api/v1, the stable API the Android app uses too. Requests carry the token as a Bearer
 // header (Arc ignores cookies on cross-origin calls). Field names follow docs/api-v1-contract.txt;
 // only the fields this app reads are typed.
@@ -48,12 +50,20 @@ export async function api<T>(path: string, init: Init = {}): Promise<T> {
       body: init.body === undefined ? undefined : JSON.stringify(init.body),
       signal: ctrl.signal,
       credentials: 'omit',
+      redirect: path === '/client-logs' ? 'error' : 'follow',
     });
     if (res.status === 204) return undefined as T;
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new ApiError(res.status, data.error || res.statusText, data.needs, data, res.headers.get('Retry-After'));
     if (res.status === 202) return { ...data, waiting: true } as T;
     return data as T;
+  } catch (error) {
+    if (!init.signal?.aborted && path !== '/client-logs') {
+      if (ctrl.signal.aborted) recordDeviceEvent('warn', 'request_timeout');
+      else if (error instanceof ApiError && error.status === 401) recordDeviceEvent('warn', 'session_expired');
+      else if (!(error instanceof ApiError) || error.status >= 500) recordDeviceEvent('warn', 'request_failed');
+    }
+    throw error;
   } finally {
     window.clearTimeout(timer);
   }

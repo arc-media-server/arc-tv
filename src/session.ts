@@ -1,4 +1,5 @@
 import { configure } from './api';
+import { clearDeviceLogs } from './lib/device-logs';
 
 // What the TV remembers between launches: the chosen server and this TV's sign-in token.
 
@@ -44,6 +45,7 @@ export function saveServer(server: SavedServer) {
 export function saveToken(token: string) {
   if (token) localStorage.setItem(TOKEN, token);
   else {
+    clearDeviceLogs();
     saveAutomaticProfile(null);
     localStorage.removeItem(TOKEN);
   }

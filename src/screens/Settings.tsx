@@ -1,3 +1,5 @@
+import { detailedLogging, setDetailedLogging } from '../lib/device-logs';
+import { sendDeviceLogs } from '../lib/send-logs';
 import { toast } from '../lib/toast';
 // Live updates
 import { useLiveRefresh } from '../lib/live-updates';
@@ -43,6 +45,15 @@ export function SettingsContent({ profile, serverName, onSwitchServer, onSignOut
   onReady: () => void;
 }) {
   const active = useActive();
+  const [detailed, setDetailed] = useState(detailedLogging);
+  const [sendingLogs, setSendingLogs] = useState(false);
+  useEffect(() => {
+    if (!active) return;
+    const update = () => setDetailed(detailedLogging());
+    update();
+    const timer = window.setInterval(update, 30_000);
+    return () => window.clearInterval(timer);
+  }, [active]);
   const [automaticId, setAutomaticId] = useState(automaticProfile);
   const [deviceProfile, setDeviceProfile] = useState(profile);
   const refreshDeviceProfile = () => {
@@ -144,6 +155,16 @@ export function SettingsContent({ profile, serverName, onSwitchServer, onSignOut
             <Row label={t('settings.server')} value={serverName} onClick={onSwitchServer} />
             <Row label={t('settings.signOut')} value="" onClick={onSignOut} />
             <p className="settings-note">{t('settings.serverNote')}</p>
+            <Row label={t('diagnostics.detailed')} value={onOff(detailed)} onClick={() => {
+              setDetailedLogging(!detailed);
+              setDetailed(!detailed);
+            }} />
+            <Row label={t('diagnostics.send')} value={sendingLogs ? t('diagnostics.sending') : ''} onClick={() => {
+              if (sendingLogs) return;
+              setSendingLogs(true);
+              void sendDeviceLogs().finally(() => setSendingLogs(false));
+            }} />
+            <p className="settings-note">{t('diagnostics.note')}</p>
           </section>
         </Container>
       </Scroller>
