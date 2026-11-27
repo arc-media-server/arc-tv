@@ -7,7 +7,7 @@ import { ContinueRowContext, MediaCard, Strip } from '../components/Cards';
 import { Scroller } from '../components/Scroller';
 import { Button, Container } from '../components/spot';
 import { formatRuntime, t } from '../i18n';
-import { episodeHeading, formatLabels } from '../lib/format';
+import { episodeHeading, formatLabels, yearAndEdition } from '../lib/format';
 import { cardFor, loadRow, resolveHomeRows, rowTitle, type Card, type RowSpec } from '../lib/home';
 import { useNav } from '../lib/nav';
 import { RoomCards, useRooms } from '../components/RoomsRow';
@@ -33,7 +33,7 @@ const queueRow: RowSpec = { id: 'queue', source: { kind: 'queue' }, style: 'thum
 export function summaryMeta(it: Item): string[] {
   return [
     it.kind === 'episode' ? episodeHeading(it) : '',
-    it.kind !== 'episode' && it.year ? String(it.year) : '',
+    it.kind !== 'episode' ? yearAndEdition(it) : '',
     it.content_rating ?? '',
     it.runtime_min ? formatRuntime(it.runtime_min) : '',
     (it.genres ?? []).slice(0, 2).join(', '),

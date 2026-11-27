@@ -14,7 +14,7 @@ import { Button, Container, Focusable, useInitialFocus } from '../components/spo
 import { Overlay, Popover, PopoverItem } from '../components/Menu';
 import { MediaInfo, MoreMenu, toggleWatched, toggleWatchlist, useCanQueue } from '../components/TitleMenu';
 import { formatRuntime, formatTime, t } from '../i18n';
-import { episodeCode, episodeHeading, formatCapsules, languageName, nextEpisode, resumeMs, versionLabel, versionsOf, watched } from '../lib/format';
+import { episodeCode, episodeHeading, formatCapsules, languageName, nextEpisode, resumeMs, versionLabel, versionsOf, watched, yearAndEdition } from '../lib/format';
 import { useActive, useNav } from '../lib/nav';
 import { prefs, queues, setSeasonPlayed, useChanges, withChanges } from '../lib/store';
 import { shuffled, usePlayAll } from '../lib/playAll';
@@ -338,7 +338,7 @@ export function Details({ id, episodeId }: { id: string; episodeId?: string }) {
   // episodes left) and score under it.
   const genres = (item.genres ?? []).slice(0, 3).join(' · ');
   const meta = [
-    item.year && item.kind !== 'episode' ? String(item.year) : '',
+    item.kind !== 'episode' ? yearAndEdition(item) : '',
     !series && item.runtime_min ? formatRuntime(item.runtime_min) : '',
     series && left > 0 ? (left === 1 ? t('details.oneEpisodeLeft') : t('details.episodesLeft', { n: left })) : '',
     item.rating ? `★ ${item.rating.toFixed(1)}` : '',

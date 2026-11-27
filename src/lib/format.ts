@@ -102,11 +102,15 @@ export function audioTrackName(a: AudioTrack): string {
   return [languageName(a.language) || t('player.track', { n: a.index }), audioCodecName(a.codec), channelsName(a.channels)].filter(Boolean).join(' · ');
 }
 
+export function yearAndEdition(item: Item): string {
+  return [item.year, item.kind === 'movie' ? item.edition : undefined].filter(Boolean).join(' · ');
+}
+
 /** The year, age rating, length and genres line under a title. */
 export function detailsLine(it: Item, genres = 3): string {
   const parts: string[] = [];
   if (it.kind === 'episode') parts.push(episodeCode(it));
-  if (it.year) parts.push(String(it.year));
+  parts.push(yearAndEdition(it));
   if (it.content_rating) parts.push(it.content_rating);
   if (it.runtime_min) parts.push(formatRuntime(it.runtime_min));
   parts.push(...(it.genres ?? []).slice(0, genres));
