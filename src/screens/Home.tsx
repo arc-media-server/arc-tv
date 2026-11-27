@@ -1,6 +1,6 @@
 import { useHideSpoilers } from '../lib/useSpoilers';
 import { spoilerSafeItem } from '../lib/spoilers';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Item, Library, Prefs } from '../api';
 import { HeroBackdrop, TitleLogo } from '../components/Backdrop';
 import { ContinueRowContext, MediaCard, Strip } from '../components/Cards';
@@ -51,8 +51,8 @@ export function HomeContent({ prefs, libraries, visits, onReady }: { prefs: Pref
   const [scrolled, setScrolled] = useState(false);
   const q = queue.use();
   const told = useRef(false);
-  // Watch Together rooms waiting for this profile: their own row, first while there are any
-  // (Android and the Apple TV app); not part of the hero.
+  // Watch Together rooms waiting for this profile: their own row while there are any, under
+  // Continue Watching (or the first row without it) in every Arc app; not part of the hero.
   const rooms = useRooms(visits);
 
   const loadOne = useCallback((spec: RowSpec) => {
@@ -125,22 +125,26 @@ export function HomeContent({ prefs, libraries, visits, onReady }: { prefs: Pref
     </div>
   );
 
+  // The rooms' row: under Continue Watching, or under the first row without it (owner, 27 November).
+  const roomsAfter = Math.max(0, visible.findIndex((s) => s.source.kind === 'continue'));
+  const roomsRow = (first: boolean) => rooms.length > 0 && (
+    <section className="home-row" data-section data-row="watch-together">
+      <h2 className="row-title" style={{ paddingLeft: START }}>{t('together.rowTitle')}</h2>
+      <RoomCards rooms={rooms} start={START} width={WIDTH.thumb} first={first} />
+    </section>
+  );
+
   return (
     <div className="home">
       {heroItem && <HeroBackdrop item={heroItem} dim={scrolled} />}
       <Scroller className="home-page" pad={72} onMove={(o) => setScrolled(o > 40)}>
-        {rooms.length > 0 && (
-          <section className="home-row home-first" data-section data-row="watch-together">
-            {heroBlock}
-            <h2 className="row-title" style={{ paddingLeft: START }}>{t('together.rowTitle')}</h2>
-            <RoomCards rooms={rooms} start={START} width={WIDTH.thumb} first />
-          </section>
-        )}
+        {!visible.length && roomsRow(true)}
         {visible.map((spec, i) => {
           const st = stateOf(spec);
           return (
-            <section key={spec.id} className={`home-row${i === 0 && !rooms.length && heroBlock ? ' home-first' : ''}`} data-section data-row={spec.id}>
-              {i === 0 && !rooms.length && heroBlock}
+            <Fragment key={spec.id}>
+            <section className={`home-row${i === 0 && heroBlock ? ' home-first' : ''}`} data-section data-row={spec.id}>
+              {i === 0 && heroBlock}
               <h2 className="row-title" style={{ paddingLeft: START }}>{rowTitle(spec)}</h2>
               {!st.cards && !st.error && <div className="row-loading" style={{ paddingLeft: START }}><div className="spinner" /></div>}
               {!st.cards && st.error && (
@@ -160,7 +164,7 @@ export function HomeContent({ prefs, libraries, visits, onReady }: { prefs: Pref
                         look={spec.style}
                         seasonPoster={spec.seasonPosters}
                         width={WIDTH[spec.style]}
-                        first={!rooms.length && card === firstCard}
+                        first={card === firstCard}
                         onClick={() => open(card)}
                         onFocus={() => onCardFocus(card)}
                       />
@@ -170,6 +174,8 @@ export function HomeContent({ prefs, libraries, visits, onReady }: { prefs: Pref
                 </ContinueRowContext.Provider>
               )}
             </section>
+            {i === roomsAfter && roomsRow(false)}
+            </Fragment>
           );
         })}
       </Scroller>
